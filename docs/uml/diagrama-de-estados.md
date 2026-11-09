@@ -1,3 +1,9 @@
+# Diagramas de Estados — Next Drive
+
+## Classe Veiculo
+
+Mostra os estados por que passa um veículo, do cadastro até a baixa da frota. As transições seguem a notação `evento [condição de guarda] / ação`.
+
 ```mermaid
 stateDiagram-v2
     direction TB
@@ -7,44 +13,20 @@ stateDiagram-v2
     state "Realizando Manutenção" as Manutencao
     state avaliacao <<choice>>
 
-    Disponivel : entry / status = DISPONIVEL
-    Disponivel : do / aguardarRetirada()
-    Disponivel : transferir (loja) / alterarLoja(loja)
-    Locado : entry / status = LOCADO
-    Locado : prorrogar (data) / alterarDevolucao(data)
-    Locado : exit / registrarKmECombustivel()
-    Manutencao : entry / status = MANUTENCAO
-    Manutencao : do / executarServico()
-    Manutencao : exit / registrarCusto()
-
     [*] --> Disponivel : / cadastrar veículo
-    Disponivel --> Locado : retirar (locação) [sem locação no período] / vincularLocacao()
-    Manutencao --> Manutencao : incluir serviço (descrição, custo)
-    Locado --> avaliacao : devolver (km, combustível)
+    Disponivel --> Locado : retirar [sem locação no período] / vincularLocacao()
+    Locado --> avaliacao : devolver
     avaliacao --> Disponivel : [sem avarias] / liberar()
     avaliacao --> Manutencao : [com avarias] / abrirManutencao()
-    Disponivel --> Manutencao : when (km ≥ km da revisão) / agendarRevisao()
-    Manutencao --> Disponivel : concluir manutenção (custo) / liberar()
+    Disponivel --> Manutencao : enviar para revisão / abrirManutencao()
+    Manutencao --> Disponivel : concluir manutenção / liberar()
     Disponivel --> [*] : baixar da frota / inativar()
     Manutencao --> [*] : baixar da frota [sem conserto] / inativar()
 ```
 
-
-| Estado | Descrição |
-|:---|:---|
-| Disponível | Veículo na loja, pronto para ser locado. |
-| Locado | Veículo em uso por um cliente. |
-| Em manutenção | Veículo em revisão ou conserto; não pode ser locado. |
-| Inativo | Veículo retirado da frota; não pode ser locado nem voltar a operar. |
-
-| De | Para | Evento | Condição |
-|:---|:---|:---|:---|
-| (início) | Disponível | cadastrar veículo | |
-| Disponível | Locado | registrar retirada | sem locação conflitante |
-| Locado | Disponível | registrar devolução | sem avarias |
-| Locado | Em manutenção | registrar devolução | com avarias |
-| Disponível | Em manutenção | enviar para manutenção | |
-| Em manutenção | Disponível | registrar retorno da manutenção | |
-| Disponível | Inativo | inativar veículo | |
-| Em manutenção | Inativo | inativar veículo | sem conserto |
-| Inativo | (fim) | | |
+| Estado | Status no banco | Descrição |
+|:---|:---|:---|
+| Disponibilizando Veículo | `DISPONIVEL` | Veículo na loja, pronto para ser retirado. |
+| Atendendo Locação | `LOCADO` | Veículo em uso por um cliente. |
+| Realizando Manutenção | `MANUTENCAO` | Veículo em revisão ou conserto; não pode ser locado. |
+| Estado final | `INATIVO` | Veículo baixado da frota. |
