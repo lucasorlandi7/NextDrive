@@ -6,19 +6,16 @@ Mostra os estados por que passa um veículo, do cadastro até a baixa da frota. 
 
 ```mermaid
 stateDiagram-v2
-    direction TB
+    direction LR
 
     state "Disponibilizando Veículo" as Disponivel
     state "Atendendo Locação" as Locado
     state "Realizando Manutenção" as Manutencao
-    state avaliacao <<choice>>
 
     [*] --> Disponivel : / cadastrar veículo
     Disponivel --> Locado : retirar [sem locação no período] / vincularLocacao()
-    Locado --> avaliacao : devolver
-    avaliacao --> Disponivel : [sem avarias] / liberar()
-    avaliacao --> Manutencao : [com avarias] / abrirManutencao()
-    Disponivel --> Manutencao : enviar para revisão / abrirManutencao()
+    Locado --> Disponivel : devolver / liberar()
+    Disponivel --> Manutencao : enviar para manutenção / abrirManutencao()
     Manutencao --> Disponivel : concluir manutenção / liberar()
     Disponivel --> [*] : baixar da frota / inativar()
     Manutencao --> [*] : baixar da frota [sem conserto] / inativar()
