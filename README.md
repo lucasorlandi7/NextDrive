@@ -66,6 +66,25 @@ Desenvolver um sistema que facilite o controle das atividades de uma locadora de
 | RNF08 | O desenvolvimento deverá ser planejado em sprints no GitHub Projects, com versionamento no GitHub. | ESI |
 | RNF09 | O sistema deverá ser modelado com diagramas UML (casos de uso, classes, sequência, atividades e estados), mantidos consistentes com o código e o banco. | ESI |
 
+## Regras de Negócio
+
+As regras de negócio definem as condições e restrições que deverão ser respeitadas durante a utilização do sistema.
+
+| Código | Regra | Componente |
+|:---|:---|:---|
+| RN01 | Cada cliente deverá possuir um CPF (pessoa física) ou CNPJ (pessoa jurídica) único cadastrado. | BDII |
+| RN02 | Cada veículo deverá possuir uma placa única. | BDII |
+| RN03 | Um veículo não poderá estar vinculado a duas locações em períodos conflitantes. | BDII |
+| RN04 | Um veículo não poderá ser alugado se estiver indisponível ou em manutenção. | BDII |
+| RN05 | O cliente deverá possuir CNH válida para realizar a retirada do veículo. | BDII |
+| RN06 | A data de devolução deverá ser posterior à data de retirada. | BDII |
+| RN07 | O valor da locação será calculado com base no valor da diária e no período contratado. | BDII |
+| RN08 | A devolução com atraso poderá gerar cobrança adicional. | BDII |
+| RN09 | Uma locação finalizada não poderá ser alterada livremente. | BDII |
+| RN10 | Apenas gerentes poderão cadastrar e gerenciar funcionários do sistema. | PII |
+| RN11 | Veículos em manutenção não serão considerados na consulta de disponibilidade durante o período de manutenção. | BDII |
+| RN12 | O registro de pagamento deverá informar a forma utilizada, podendo ser cartão de crédito, cartão de débito ou PIX. | PII |
+
 
 ## Tecnologias
 
