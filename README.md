@@ -2,8 +2,8 @@
 
 **Trabalho Final Integrado de Programação II, Engenharia de Software I e Banco de Dados II** — Ciência da Computação, Universidade do Oeste de Santa Catarina (Unoesc), 4º semestre, 2026/02.
 
-**Autores:** _[Nome do integrante 1]_, _[Nome do integrante 2]_, _[Nome do integrante 3]_, _[Nome do integrante 4]_
-**Professores:** _[Programação II]_, _[Engenharia de Software I]_, _[Banco de Dados II]_
+**Autores:** _[Lucas Orlandi]_, _[Samuel Gralow]_, _[Diogo Rodrigo Nielsson]_, _[Felipe Kremer]_
+**Professores:** _[Otilia]_, _[Fran]_, _[Roberson]_
 **Repositório:** <https://github.com/lucasorlandi7/NextDrive>
 
 ---
