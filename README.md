@@ -2,8 +2,8 @@
 
 **Trabalho Final Integrado de Programação II, Engenharia de Software I e Banco de Dados II** — Ciência da Computação, Universidade do Oeste de Santa Catarina (Unoesc), 4º semestre, 2026/02.
 
-**Autores:** _[Nome do integrante 1]_, _[Nome do integrante 2]_, _[Nome do integrante 3]_, _[Nome do integrante 4]_
-**Professores:** _[Programação II]_, _[Engenharia de Software I]_, _[Banco de Dados II]_
+**Autores:** Lucas Orlandi, Samuel Gralow, Diogo Rodrigo Nielsson, Felipe Kremer
+**Professores:** Otilia, Fran, Roberson.
 **Repositório:** <https://github.com/lucasorlandi7/NextDrive>
 
 ---
@@ -127,23 +127,6 @@ Os requisitos completos (RF01 a RF24, RNF01 a RNF09 e regras de negócio RN01 a 
 
 ---
 
-## 3 Metodologia e planejamento
-
-O desenvolvimento seguiu **Scrum simplificado** com quadro **Kanban no GitHub Projects**, em cinco sprints de uma semana:
-
-| Sprint | Objetivo |
-|---|---|
-| 1 | Fundamentos e banco de dados: requisitos, modelo relacional, tabelas, índices, views e relatórios. |
-| 2 | Regras no banco e segurança: *triggers*, *procedures*, perfis de acesso, backup e testes das regras. |
-| 3 | Modelagem de software: casos de uso, classes, sequência, atividades e estados. |
-| 4 | Sistema em Java: domínio, acesso a dados, login, telas, cadastros e relatórios. |
-| 5 | Entrega: README/artigo, revisão cruzada, ensaio da apresentação e autoavaliação. |
-
-As regras de trabalho: toda tarefa vira uma *issue* com responsável; ninguém altera a `main` diretamente (cada tarefa tem um *branch* e um *pull request* revisado por um colega); mensagens de commit descrevem a mudança; e uma tarefa só está pronta quando funciona, passou nos testes, está documentada e foi revisada. O plano completo, com as tarefas de cada sprint, está em [`docs/plano-de-sprints.md`](docs/plano-de-sprints.md).
-
-![Quadro Kanban no GitHub Projects](docs/telas/quadro-github-projects.png)
-
-*Figura — Quadro do projeto no GitHub Projects.*
 
 ---
 
