@@ -14,7 +14,7 @@ Trabalho Final Integrado de **Programação II**, **Engenharia de Software I** e
 |---|---|
 | **Cliente** (pessoa física ou jurídica) | Cadastrar-se, consultar disponibilidade, reservar e acompanhar suas locações |
 | **Atendente** | Cadastrar clientes, reservar e cancelar, registrar retirada, devolução, pagamentos e multas |
-| **Gerente** | Tudo do atendente, mais funcionários, frota, categorias, manutenções, relatórios e auditoria |
+| **Gerente** | Tudo do atendente, mais funcionários, frota, lojas, categorias, manutenções, relatórios e auditoria |
 
 As regras de negócio (locação conflitante, idade e CNH do condutor, locação encerrada imutável, auditoria) estão no **banco de dados**, em triggers e procedures. O Java mostra as telas e chama o banco.
 
