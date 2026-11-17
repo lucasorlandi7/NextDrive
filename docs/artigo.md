@@ -154,7 +154,7 @@ Modelo lógico relacional do sistema, implementado em PostgreSQL (`sql/02_create
 
 ### 4.1 Diagrama entidade-relacionamento
 
-![Diagrama relacional gerado a partir do banco](diagrama-relacional.png)
+![Diagrama relacional gerado a partir do banco](uml/diagrama-relacional.jpeg)
 
 *Figura — Diagrama relacional simplificado: chaves e colunas principais das 15 tabelas que se relacionam. A estrutura completa está no diagrama abaixo e no dicionário de dados.*
 
@@ -1667,7 +1667,7 @@ Modelo de domínio em Java (pacote `br.edu.unoesc.nextdrive.model`), consistente
 - **Pessoa** → `Cliente` → `ClientePessoaFisica` / `ClientePessoaJuridica`, e **Pessoa** → `Funcionario`;
 - **Pagamento** → `PagamentoCartao` / `PagamentoPix`.
 
-![Diagrama de classes](diagrama-de-classe.png)
+![Diagrama de classes](uml/diagrama-de-classe.jpeg)
 *Figura — Diagrama de classes do pacote `model`. Getters, setters, construtores e enumerações foram omitidos para legibilidade.*
 
 #### Conceitos de POO aplicados
