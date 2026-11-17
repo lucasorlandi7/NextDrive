@@ -4,7 +4,7 @@ Modelo de domínio em Java, no pacote [`br.edu.unoesc.nextdrive.model`](../../ja
 
 ![Diagrama de classes do Next Drive](../diagrama-de-classe.png)
 
-O diagrama mostra os atributos e métodos principais de cada classe. Getters, setters, construtores e as enumerações (`StatusVeiculo`, `StatusReserva`, `StatusLocacao`, `Canal`, `Cargo`, `FormaPagamento` e `TipoManutencao`) foram omitidos para deixar o desenho legível.
+O diagrama mostra os atributos e métodos principais de cada classe. Getters, setters, construtores e as enumerações (`StatusVeiculo`, `StatusReserva`, `StatusLocacao`, `Canal`, `Cargo`, `FormaPagamento` e `TipoManutencao`) foram omitidos para deixar o desenho legível. A classe `Usuario`, que guarda apenas os dados da sessão de login, também não aparece por não ser uma entidade do negócio.
 
 ## Classes por módulo
 
