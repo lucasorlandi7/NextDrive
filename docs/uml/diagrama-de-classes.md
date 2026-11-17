@@ -12,8 +12,8 @@ O diagrama mostra os atributos e métodos principais de cada classe. Getters, se
 |---|---|---|
 | Pessoas | `Pessoa`, `Cliente`, `ClientePessoaFisica`, `ClientePessoaJuridica`, `Funcionario` | Dados de quem usa o sistema: clientes pessoa física e jurídica, atendentes e gerentes |
 | Frota | `Loja`, `CategoriaVeiculo`, `Veiculo`, `Manutencao` | Lojas, categorias com o valor da diária, veículos e manutenções |
-| Reserva e locação | `Reserva`, `Locacao`, `Multa` | A reserva por categoria, a locação do veículo e as multas de trânsito |
-| Pagamentos | `Pagamento`, `PagamentoCartao`, `PagamentoPix` | Pagamentos de cada locação, por cartão ou PIX |
+| Reserva e locação | `Reserva`, `Locacao` | A reserva por categoria e a locação do veículo |
+| Pagamentos e multas | `Pagamento`, `PagamentoCartao`, `PagamentoPix`, `Multa` | Pagamentos de cada locação, por cartão ou PIX, e as multas de trânsito |
 
 ## Herança
 
@@ -31,6 +31,7 @@ O diagrama mostra os atributos e métodos principais de cada classe. Getters, se
 | `Veiculo` | * | `Loja` | 1 | Todo veículo está em uma loja |
 | `Manutencao` | * | `Veiculo` | 1 | Um veículo pode ter várias manutenções |
 | `Funcionario` | * | `Loja` | 1 | Todo funcionário trabalha em uma loja |
+| `ClientePessoaJuridica` | * | `ClientePessoaFisica` | 1 | Toda empresa tem um condutor responsável, que é uma pessoa física |
 | `Reserva` | * | `Cliente` | 1 | Um cliente pode fazer várias reservas |
 | `Reserva` | * | `CategoriaVeiculo` | 1 | A reserva é feita por categoria |
 | `Locacao` | 0..1 | `Reserva` | 1 | Uma reserva gera no máximo uma locação |
@@ -38,7 +39,7 @@ O diagrama mostra os atributos e métodos principais de cada classe. Getters, se
 | `Multa` | * | `Locacao` | 1 | Uma locação pode ter várias multas |
 | `Pagamento` | * | `Locacao` | 1 | Uma locação pode ser paga em várias partes |
 
-No código, as associações são feitas pelo identificador da outra classe (por exemplo, `Veiculo.categoriaId`), da mesma forma que as chaves estrangeiras no banco.
+No código, quase todas as associações são feitas pelo identificador da outra classe (por exemplo, `Veiculo.categoriaId`), da mesma forma que as chaves estrangeiras no banco. A exceção é o condutor responsável, que `ClientePessoaJuridica` guarda como objeto (`condutorResponsavel`).
 
 ## Conceitos de POO aplicados
 
