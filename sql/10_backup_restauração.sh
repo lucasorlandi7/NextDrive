@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =====================================================================
-# Next Drive - 10_backup_restore.sh : rotina de backup e restauração (RF18)
+# Next Drive - 10_backup_restauração.sh : rotina de backup e restauração (RF18)
 #
 # Uso:
 #   ./sql/10_backup_restore.sh backup               backup completo do banco (formato custom)
