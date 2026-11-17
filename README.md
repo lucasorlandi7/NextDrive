@@ -130,8 +130,8 @@ NextDrive/
 │   ├── diagrama-relacional.png
 │   ├── dicionario-de-dados.md
 │   └── politicas-de-acesso.md
-├── Java/
-├── SQL/
+├── java/
+├── sql/
 ├── Enunciado_Trabalho_A1.pdf
 ├── Levantamento de Requisitos.docx
 └── README.md
@@ -161,58 +161,145 @@ NextDrive/
 
 ## 7. Banco de dados
 
-O banco de dados do Next Drive utiliza PostgreSQL e armazena as informações necessárias para o funcionamento do sistema.
+O banco de dados do Next Drive utiliza PostgreSQL 16 e armazena as informações necessárias para o funcionamento do sistema de aluguel de veículos.
 
-A estrutura contempla entidades relacionadas a clientes, funcionários, veículos, categorias, lojas, reservas, locações, pagamentos e multas.
+A estrutura contempla clientes, funcionários, veículos, categorias, lojas, reservas, locações, pagamentos e multas, utilizando chaves primárias, chaves estrangeiras e restrições de integridade.
 
-Também são utilizados recursos de banco de dados para garantir a integridade e implementar regras de negócio:
+### 7.1 Scripts do banco de dados
 
-- Chaves primárias e estrangeiras.
-- Restrições de integridade.
-- Índices.
-- Views para consultas e relatórios.
-- Triggers para validações e auditoria.
-- Procedures para operações de negócio.
-- Perfis de acesso e privilégios.
-- Backup e restauração.
+Os scripts estão disponíveis na pasta `SQL/` e devem ser executados na ordem apresentada abaixo.
 
-Os scripts de criação e configuração estão disponíveis na pasta `SQL/`.
+| Ordem | Arquivo | Finalidade |
+|---|---|---|
+| 1 | `01_create_database.sql` | Criação do banco de dados `next_drive`. |
+| 2 | `02_create_tables.sql` | Criação das tabelas, extensão `pgcrypto`, chaves e restrições. |
+| 3 | `03_indices.sql` | Criação dos índices para otimização das consultas. |
+| 4 | `04_views.sql` | Criação de views e da função `fn_veiculos_disponiveis`. |
+| 5 | `05_dados_exemplo.sql` | Inserção de dados de exemplo. |
+| 6 | `06_consultas_relatorios.sql` | Consultas SQL para relatórios administrativos (R01 a R13). |
+| 7 | `07_roles_privilegios.sql` | Criação de grupos, usuários e privilégios de acesso. |
+| 8 | `08_gatilhos.sql` | Criação de triggers para validações e auditoria. |
+| 9 | `09_procedimentos.sql` | Criação de procedures e da função `fn_autenticar`. |
+| 10 | `10_backup_restore.sh` | Rotinas de backup e restauração do banco de dados. |
+| 11 | `11_testes_regras.sql` | Execução de 34 verificações das regras de negócio. |
+
+### 7.2 Recursos implementados no banco
+
+O banco de dados utiliza os seguintes recursos:
+
+- **Índices:** melhoram o desempenho das consultas.
+- **Visualizações:** disponibilizam dados organizados para consultas e relatórios.
+- **Gatilhos:** automatizam validações e auditorias.
+- **Procedures:** executam operações e regras de negócio.
+- **Funções:** permitem executar operações específicas, como consulta de disponibilidade e autenticação.
+- **Controle de acesso:** define usuários, grupos e privilégios.
+- **Backup e restauração:** permitem gerar cópias de segurança e recuperar os dados.
+- **Testes:** verificam o comportamento das regras implementadas.
+
+### 7.3 Documentação complementar
+
+- Modelo relacional: `documentos/diagrama-relacional.png`.
+- Definitivo de dados: `documentos/dicionario-de-dados.md`.
+- Políticas de acesso: `documentos/politicas-de-acesso.md`.
+- Procedimentos de backup: `documentos/backup-restauração.md`.
+
+
 
 ## 8. Diagramas UML
 
-Os diagramas UML documentam a estrutura e o comportamento do Next Drive.
+Os diagramas UML documentam a estrutura, o comportamento e os principais processos do sistema Next Drive.
 
-Estão organizados na pasta `documentos/uml/`:
+Os arquivos estão organizados na pasta `documentos/uml/`.
 
-- Diagrama de casos de uso.
-- Diagrama de classes.
-- Diagramas de sequência.
-- Diagrama de atividades.
-- Diagramas de estados.
+### 8.1 Diagrama de casos de uso
+
+[Visualizar diagrama de casos de uso](documentos/uml/diagrama-de-casos-de-uso.md)
+
+### 8.2 Diagrama de classes
+
+[Visualizar diagrama de classes](documentos/uml/diagrama-de-classes.md)
+
+### 8.3 Diagramas de sequência
+
+Os diagramas de sequência representam a interação entre os usuários, a interface, o sistema e o banco de dados durante os principais processos.
+
+**Reserva**
+
+![Diagrama de sequência de reserva](documentos/uml/diagrama-sequencia-reserva.jpeg)
+
+**Retirada do veículo**
+
+![Diagrama de sequência de retirada](documentos/uml/diagrama-sequencia-retirada.jpeg)
+
+**Devolução e pagamento**
+
+![Diagrama de sequência de devolução e pagamento](documentos/uml/diagrama-sequencia-devolucao-pagamento.jpeg)
+
+### 8.4 Diagrama de atividades
+
+[Visualizar diagrama de atividades](documentos/uml/diagrama-de-atividades.md)
+
+### 8.5 Diagramas de estados
+
+[Visualizar diagramas de estados](documentos/uml/diagrama-de-estados.md)
+
+
 
 ## 9. Telas do sistema
 
-As capturas de tela da aplicação são armazenadas em `documentos/telas/`.
+As capturas de tela apresentam as principais interfaces e funcionalidades desenvolvidas no sistema Next Drive.
 
-Elas demonstram as principais funcionalidades e interfaces desenvolvidas para o Next Drive.
+Os arquivos de imagem estão organizados na pasta `documentos/telas/`.
+
+As telas documentam as principais operações do sistema, incluindo:
+
+- Acesso e autenticação de usuários.
+- Cadastro e gerenciamento de clientes.
+- Gerenciamento de veículos e categorias.
+- Consulta de disponibilidade e reservas.
+- Retirada e devolução de veículos.
+- Registro de pagamentos e multas.
+- Consultas e relatórios administrativos.
+
+As capturas também são utilizadas para ilustrar o funcionamento do sistema no artigo do projeto.
+
+
 
 ## 10. Como executar
 
 ### 10.1 Banco de dados
 
+**Requisitos:** PostgreSQL 16 ou superior e DBeaver.
+
 1. Instale e configure o PostgreSQL.
-2. Crie o banco de dados do projeto.
-3. Abra o DBeaver e conecte-se ao banco.
-4. Execute os scripts disponíveis na pasta `SQL/`, respeitando a ordem de execução definida nos próprios arquivos.
+2. Abra o DBeaver e conecte-se ao servidor PostgreSQL.
+3. Acesse a pasta `SQL/` do repositório.
+4. Consulte o arquivo `SQL/README.md` para verificar as instruções.
+5. Execute os scripts de criação e configuração na ordem indicada na documentação:
+
+| Ordem | Script |
+|---|---|
+| 1 | `01_create_database.sql` |
+| 2 | `02_create_tables.sql` |
+| 3 | `03_indices.sql` |
+| 4 | `04_views.sql` |
+| 5 | `05_dados_exemplo.sql` |
+| 6 | `06_consultas_relatorios.sql` |
+| 7 | `07_roles_privilegios.sql` |
+| 8 | `08_gatilhos.sql` |
+| 9 | `09_procedimentos.sql` |
+| 10 | `10_backup_restore.sh` |
+| 11 | `11_testes_regras.sql` |
+
+**Atenção:** o arquivo `10_backup_restore.sh` é um script de terminal, não deve ser executado como SQL no DBeaver. O primeiro script pode apagar e recriar o banco caso ele já exista. Faça backup antes de executá-lo em um banco com dados importantes.
 
 ### 10.2 Aplicação Java
 
-1. Configure o ambiente Java.
-2. Abra o projeto localizado na pasta `Java/` utilizando o ambiente de desenvolvimento.
-3. Configure a conexão com o PostgreSQL.
-4. Execute a aplicação conforme as instruções do projeto.
+1. Instale e configure o Java.
+2. Abra a pasta `Java/` no ambiente de desenvolvimento utilizado pelo projeto.
+3. Configure os parâmetros de conexão com o PostgreSQL.
+4. Execute a aplicação conforme a configuração e as instruções disponíveis no projeto.
 
-**Observação:** os parâmetros de conexão devem corresponder à configuração do banco de dados utilizado no ambiente local.
 
 ## 11. Organização do desenvolvimento
 
