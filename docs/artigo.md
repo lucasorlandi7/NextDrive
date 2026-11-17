@@ -371,8 +371,8 @@ erDiagram
 
 ### 4.3 Normalização
 
-- **1FN:** todas as colunas são atômicas; não há campos repetidos ou listas. Parcelas de pagamento ficam em colunas únicas.
-- **2FN:** todas as tabelas com chave composta (as subclasses usam `pessoa_id` simples como PK) dependem da chave inteira; os atributos não-chave dependem da PK completa.
+- **1FN:** não há listas nem grupos repetidos dentro de uma coluna; cada pagamento e cada multa é uma linha separada. Exceção conhecida: `loja.endereco` guarda o endereço inteiro em uma única coluna (ponto de melhoria).
+- **2FN:** todas as chaves primárias são simples (uma única coluna), então não existe dependência parcial: os atributos não-chave dependem da chave inteira.
 - **3FN:** não há dependências transitivas. Exemplos: o cliente da locação vem da reserva; nome da loja, da categoria e da pessoa ficam apenas nas suas tabelas e são trazidos por junção (views do `04_views.sql`).
 
 Única redundância intencional: `locacao.valor_final` e seus componentes, justificada na tabela acima.
