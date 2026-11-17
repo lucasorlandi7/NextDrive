@@ -157,7 +157,7 @@ Modelo lógico relacional do sistema, implementado em PostgreSQL (`sql/02_create
 
 ![Diagrama relacional gerado a partir do banco](diagrama-relacional.png)
 
-*Figura — Diagrama relacional (17 tabelas), gerado a partir do banco PostgreSQL.*
+*Figura — Diagrama relacional simplificado: chaves e colunas principais das 15 tabelas que se relacionam. A estrutura completa está no diagrama abaixo e no dicionário de dados.*
 
 A mesma estrutura em notação entidade-relacionamento, com as cardinalidades:
 
