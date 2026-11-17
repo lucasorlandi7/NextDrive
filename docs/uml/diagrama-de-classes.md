@@ -21,7 +21,7 @@ O diagrama mostra os atributos e métodos principais de cada classe. Getters, se
 |---|---|---|
 | `Pessoa` (abstrata) | `Cliente`, `Funcionario` | Nome e e-mail ficam em `Pessoa`; cada filha define o seu perfil em `getPerfil()` |
 | `Cliente` (abstrata) | `ClientePessoaFisica`, `ClientePessoaJuridica` | Cada tipo de cliente devolve o próprio documento e o próprio condutor |
-| `Pagamento` (abstrata) | `PagamentoCartao`, `PagamentoPix` | Cada forma de pagamento se descreve e se valida de um jeito |
+| `Pagamento` (abstrata) | `PagamentoCartao`, `PagamentoPix` | Cada forma de pagamento informa o próprio tipo em `getForma()` e se descreve em `descrever()` |
 
 ## Associações
 
@@ -36,6 +36,7 @@ O diagrama mostra os atributos e métodos principais de cada classe. Getters, se
 | `Reserva` | * | `CategoriaVeiculo` | 1 | A reserva é feita por categoria |
 | `Locacao` | 0..1 | `Reserva` | 1 | Uma reserva gera no máximo uma locação |
 | `Locacao` | * | `Veiculo` | 1 | O veículo é escolhido na retirada |
+| `Locacao` | * | `ClientePessoaFisica` | 1 | Quem dirige o veículo é sempre uma pessoa física com CNH, mesmo quando o contratante é uma empresa |
 | `Multa` | * | `Locacao` | 1 | Uma locação pode ter várias multas |
 | `Pagamento` | * | `Locacao` | 1 | Uma locação pode ser paga em várias partes |
 
