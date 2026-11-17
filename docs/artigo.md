@@ -5,7 +5,7 @@
 **Autores:** Lucas Orlandi, Samuel Gralow, Diogo Rodrigo Nielsson, Felipe Kremer  
 **Professores:** Otilia, Fran, Roberson  
 **Repositório:** <https://github.com/lucasorlandi7/NextDrive>
-
+O diagrama mostra os atributos e métodos principais de cada classe. Getters, setters, construtores e as enumerações (`StatusVeiculo`, `StatusReserva`, `StatusLocacao`, `Canal`, `Cargo`, `FormaPagamento` e `TipoManutencao`) foram omitidos para deixar o desenho legível. A classe `Usuario`, que guarda apenas os dados da sessão de login, também não aparece por não ser uma entidade do negócio.
 ---
 
 ## Resumo
@@ -362,7 +362,7 @@ erDiagram
 |---|---|
 | **Herança de `Pessoa`** em tabelas separadas (`cliente`, `cliente_pf`, `cliente_pj`, `funcionario`) | Atende o RF20 e evita colunas nulas: CPF/CNH só existem para PF, CNPJ/condutor só para PJ. |
 | **Chave estrangeira composta** `(pessoa_id, tipo_cliente)` nas subclasses | Garante pelo próprio banco que um cliente `PJ` não tenha linha em `cliente_pf` e vice-versa. |
-| **Herança de `Pagamento`** (`pagamento_cartao`, `pagamento_pix`) | Atende o RF20. A coluna `forma` repetida na subclasse, com FK composta `(id, forma)`, impede um PIX ter detalhes de cartão. |
+| **Herança de `Pagamento`** (`pagamento_cartao`, `pagamento_pix`) | Atende o RF20. A coluna `forma` repetida na subclasse, com FK composta `(pagamento_id, forma)`, impede um PIX ter detalhes de cartão. |
 | `locacao` **não guarda `cliente_id`** | O cliente já é obtido por `locacao.reserva_id → reserva.cliente_id`; guardar de novo criaria dependência transitiva (fere a 3FN). |
 | `locacao.condutor_id` referencia `cliente_pf` | Quem dirige é sempre pessoa física com CNH, mesmo quando o contratante é PJ (RF04, RF16). |
 | `locacao.valor_diaria_contratada` | Guarda o preço vigente na retirada. Se o gerente alterar a categoria depois, as locações antigas não mudam. |
@@ -1669,6 +1669,7 @@ Modelo de domínio em Java (pacote `br.edu.unoesc.nextdrive.model`), consistente
 - **Pagamento** → `PagamentoCartao` / `PagamentoPix`.
 
 ![Diagrama de classes](diagrama-de-classe.png)
+*Figura — Diagrama de classes do pacote `model`. Getters, setters, construtores e enumerações foram omitidos para legibilidade.*
 
 #### Conceitos de POO aplicados
 
