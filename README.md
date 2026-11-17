@@ -213,7 +213,7 @@ Os arquivos estão organizados na pasta `documentos/uml/`.
 
 ### 8.1 Diagrama de casos de uso
 
-[Visualizar diagrama de casos de uso](documentos/uml/diagrama-de-casos-de-uso.md)
+
 
 ### 8.2 Diagrama de classes
 
@@ -225,23 +225,23 @@ Os diagramas de sequência representam a interação entre os usuários, a inter
 
 **Reserva**
 
-![Diagrama de sequência de reserva](documentos/uml/diagrama-sequencia-reserva.jpeg)
+
 
 **Retirada do veículo**
 
-![Diagrama de sequência de retirada](documentos/uml/diagrama-sequencia-retirada.jpeg)
+
 
 **Devolução e pagamento**
 
-![Diagrama de sequência de devolução e pagamento](documentos/uml/diagrama-sequencia-devolucao-pagamento.jpeg)
+
 
 ### 8.4 Diagrama de atividades
 
-[Visualizar diagrama de atividades](documentos/uml/diagrama-de-atividades.md)
+
 
 ### 8.5 Diagramas de estados
 
-[Visualizar diagramas de estados](documentos/uml/diagrama-de-estados.md)
+
 
 
 
