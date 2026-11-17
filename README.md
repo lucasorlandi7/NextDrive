@@ -207,39 +207,19 @@ O banco de dados utiliza os seguintes recursos:
 
 ## 8. Diagramas UML
 
-Os diagramas UML documentam a estrutura, o comportamento e os principais processos do sistema Next Drive.
 
-Os arquivos estão organizados na pasta `documentos/uml/`.
+Os diagramas UML documentam a estrutura, o comportamento e os principais processos do sistema Next Drive. Clique no link para abrir a imagem do diagrama.
 
-### 8.1 Diagrama de casos de uso
-
-
-
-### 8.2 Diagrama de classes
-
-[Visualizar diagrama de classes](documentos/uml/diagrama-de-classes.md)
-
-### 8.3 Diagramas de sequência
-
-Os diagramas de sequência representam a interação entre os usuários, a interface, o sistema e o banco de dados durante os principais processos.
-
-**Reserva**
-
-
-
-**Retirada do veículo**
-
-
-
-**Devolução e pagamento**
-
-
-
-### 8.4 Diagrama de atividades
-
-
-
-### 8.5 Diagramas de estados
+| Diagrama | Abrir | Explicação no artigo |
+|---|---|---|
+| Casos de uso | [Ver diagrama de casos de uso](docs/uml/diagrama-de-casos-de-uso.md) | [Seção 6.1](docs/artigo.md#61-casos-de-uso-rf19) |
+| Classes | [Ver imagem do diagrama de classes](https://raw.githubusercontent.com/lucasorlandi7/NextDrive/main/docs/uml/diagrama-de-classe.jpeg) | [Seção 6.2](docs/artigo.md#62-classes-rf20) |
+| Relacional | [Ver imagem do diagrama relacional](https://raw.githubusercontent.com/lucasorlandi7/NextDrive/main/docs/uml/diagrama-relacional.jpeg) | [Seção 4.1](docs/artigo.md#41-diagrama-entidade-relacionamento) |
+| Sequência — reserva | [Ver imagem da sequência de reserva](https://raw.githubusercontent.com/lucasorlandi7/NextDrive/main/docs/uml/diagrama-sequencia-reserva.jpeg) | [Seção 6.3](docs/artigo.md#63-sequência-rf21) |
+| Sequência — retirada | [Ver imagem da sequência de retirada](https://raw.githubusercontent.com/lucasorlandi7/NextDrive/main/docs/uml/diagrama-sequencia-retirada.jpeg) | [Seção 6.3](docs/artigo.md#63-sequência-rf21) |
+| Sequência — devolução e pagamento | [Ver imagem da sequência de devolução](https://raw.githubusercontent.com/lucasorlandi7/NextDrive/main/docs/uml/diagrama-sequencia-devolucao-pagamento.jpeg) | [Seção 6.3](docs/artigo.md#63-sequência-rf21) |
+| Atividades | [Ver diagrama de atividades](docs/uml/diagrama-de-atividades.md) | [Seção 6.4](docs/artigo.md#64-atividades-rf22) |
+| Estados | [Ver diagramas de estados](docs/uml/diagrama-de-estados.md) | [Seção 6.5](docs/artigo.md#65-estados-rf23) |
 
 
 
