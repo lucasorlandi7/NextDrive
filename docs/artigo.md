@@ -156,8 +156,7 @@ Modelo lógico relacional do sistema, implementado em PostgreSQL (`sql/02_create
 
 ![Diagrama relacional gerado a partir do banco](uml/diagrama-relacional.jpeg)
 
-*Figura — Diagrama relacional simplificado: chaves e colunas principais das 15 tabelas que se relacionam. A estrutura completa está no diagrama abaixo e no dicionário de dados.*
-
+*Figura — Diagrama relacional simplificado: chaves e colunas principais das 15 tabelas que se relacionam. As 17 tabelas, com as cardinalidades, estão no diagrama abaixo; a lista completa de colunas está no dicionário de dados.*
 A mesma estrutura em notação entidade-relacionamento, com as cardinalidades:
 
 ```mermaid
@@ -245,6 +244,7 @@ erDiagram
     }
     CLIENTE_PF {
         int pessoa_id PK,FK
+        char tipo_cliente FK
         char cpf UK
         date data_nascimento
         varchar cnh_numero UK
@@ -253,6 +253,7 @@ erDiagram
     }
     CLIENTE_PJ {
         int pessoa_id PK,FK
+        char tipo_cliente FK
         char cnpj UK
         varchar razao_social
         int condutor_id FK
@@ -304,13 +305,14 @@ erDiagram
     }
     PAGAMENTO_CARTAO {
         int pagamento_id PK,FK
-        varchar forma
+        varchar forma FK
         varchar bandeira
         char final_cartao
         smallint parcelas
     }
     PAGAMENTO_PIX {
         int pagamento_id PK,FK
+        varchar forma FK
         varchar txid UK
         varchar chave_pix
     }
