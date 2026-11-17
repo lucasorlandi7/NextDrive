@@ -26,21 +26,24 @@ As tabelas `auditoria` e `parametro_sistema` não aparecem no desenho porque nã
 | `loja` | `veiculo` | `loja_atual_id` | 1 : N |
 | `veiculo` | `manutencao` | `veiculo_id` | 1 : N |
 | `loja` | `funcionario` | `loja_id` | 1 : N |
-| `pessoa` | `funcionario` | `pessoa_id` | 1 : 1 |
-| `pessoa` | `cliente` | `pessoa_id` | 1 : 1 |
-| `cliente` | `cliente_pf` | `pessoa_id` | 1 : 1 |
-| `cliente` | `cliente_pj` | `pessoa_id` | 1 : 1 |
+| `pessoa` | `funcionario` | `pessoa_id` | 1 : 0..1 |
+| `pessoa` | `cliente` | `pessoa_id` | 1 : 0..1 |
+| `cliente` | `cliente_pf` | `pessoa_id` | 1 : 0..1 |
+| `cliente` | `cliente_pj` | `pessoa_id` | 1 : 0..1 |
 | `cliente_pf` | `cliente_pj` | `condutor_id` | 1 : N |
 | `cliente` | `reserva` | `cliente_id` | 1 : N |
 | `categoria_veiculo` | `reserva` | `categoria_id` | 1 : N |
-| `reserva` | `locacao` | `reserva_id` | 1 : 1 |
+| `reserva` | `locacao` | `reserva_id` | 1 : 0..1 |
 | `veiculo` | `locacao` | `veiculo_id` | 1 : N |
+| `cliente_pf` | `locacao` | `condutor_id` | 1 : N |
 | `locacao` | `pagamento` | `locacao_id` | 1 : N |
-| `pagamento` | `pagamento_cartao` | `pagamento_id` | 1 : 1 |
-| `pagamento` | `pagamento_pix` | `pagamento_id` | 1 : 1 |
+| `pagamento` | `pagamento_cartao` | `pagamento_id` | 1 : 0..1 |
+| `pagamento` | `pagamento_pix` | `pagamento_id` | 1 : 0..1 |
 | `locacao` | `multa` | `locacao_id` | 1 : N |
 
-Além dessas, o banco tem chaves estrangeiras de controle que não foram desenhadas para manter o diagrama legível: `reserva` e `locacao` também apontam para `loja` (loja de retirada e de devolução) e para `funcionario` (quem atendeu); `locacao` aponta para `cliente_pf` (o condutor); e `manutencao`, `pagamento` e `multa` apontam para o `funcionario` que fez o registro.
+Nas subclasses, a coluna `tipo_cliente` (em `cliente_pf` e `cliente_pj`) e a coluna `forma` (em `pagamento_cartao` e `pagamento_pix`) aparecem marcadas como FK porque fazem parte das chaves estrangeiras compostas explicadas em "Decisões de modelagem".
+
+Além dessas, o banco tem chaves estrangeiras de controle que não foram desenhadas para manter o diagrama legível: `reserva` e `locacao` também apontam para `loja` (loja de retirada e de devolução) e para `funcionario` (quem atendeu); e `manutencao`, `pagamento` e `multa` apontam para o `funcionario` que fez o registro.
 
 ## Decisões de modelagem
 
