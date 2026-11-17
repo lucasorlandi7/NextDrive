@@ -1,5 +1,5 @@
 -- =====================================================================
--- Next Drive - 08_triggers.sql : gatilhos (triggers) de integridade e auditoria
+-- Next Drive - 08_gatilhos.sql : gatilhos (triggers) de integridade e auditoria
 -- Executar:  psql -U postgres -d next_drive -f sql/08_triggers.sql
 --
 -- Triggers implementados:
