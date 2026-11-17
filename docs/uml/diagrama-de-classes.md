@@ -1,245 +1,53 @@
-# Diagrama de Classes — Next Drive (RF20)
+# Diagrama de Classes — Next Drive
 
-Modelo de domínio em Java (pacote `br.edu.unoesc.nextdrive.model`), consistente com o banco de dados
-(RNF09). As duas hierarquias de herança pedidas no RF20 são destacadas:
+Modelo de domínio em Java, no pacote [`br.edu.unoesc.nextdrive.model`](../../java/src/main/java/br/edu/unoesc/nextdrive/model), organizado nos mesmos módulos do banco de dados.
 
-- **Pessoa** → `Cliente` → `ClientePessoaFisica` / `ClientePessoaJuridica`, e **Pessoa** → `Funcionario`;
-- **Pagamento** → `PagamentoCartao` / `PagamentoPix`.
+![Diagrama de classes do Next Drive](../diagrama-de-classe.png)
 
-```mermaid
-classDiagram
-    direction TB
+O diagrama mostra os atributos e métodos principais de cada classe. Getters, setters, construtores e as enumerações (`StatusVeiculo`, `StatusReserva`, `StatusLocacao`, `Canal`, `Cargo`, `FormaPagamento` e `TipoManutencao`) foram omitidos para deixar o desenho legível.
 
-    class Pessoa {
-        <<abstract>>
-        -Integer id
-        -String nome
-        -String email
-        -String senhaHash
-        -String telefone
-        -LocalDateTime dataCadastro
-        +getPerfil() String
-    }
+## Classes por módulo
 
-    class Cliente {
-        <<abstract>>
-        +getDocumento() String
-        +getCondutor() ClientePessoaFisica
-    }
+| Módulo | Classes | Responsabilidade |
+|---|---|---|
+| Pessoas | `Pessoa`, `Cliente`, `ClientePessoaFisica`, `ClientePessoaJuridica`, `Funcionario` | Dados de quem usa o sistema: clientes pessoa física e jurídica, atendentes e gerentes |
+| Frota | `Loja`, `CategoriaVeiculo`, `Veiculo`, `Manutencao` | Lojas, categorias com o valor da diária, veículos e manutenções |
+| Reserva e locação | `Reserva`, `Locacao`, `Multa` | A reserva por categoria, a locação do veículo e as multas de trânsito |
+| Pagamentos | `Pagamento`, `PagamentoCartao`, `PagamentoPix` | Pagamentos de cada locação, por cartão ou PIX |
 
-    class ClientePessoaFisica {
-        -String cpf
-        -LocalDate dataNascimento
-        -String cnhNumero
-        -LocalDate cnhDataEmissao
-        -LocalDate cnhValidade
-        +getIdade(LocalDate data) int
-        +cnhValidaEm(LocalDate data) boolean
-        +habilitadoHaAnos(int anos, LocalDate data) boolean
-        +getDocumento() String
-        +getCondutor() ClientePessoaFisica
-    }
+## Herança
 
-    class ClientePessoaJuridica {
-        -String cnpj
-        -String razaoSocial
-        -ClientePessoaFisica condutorResponsavel
-        +getDocumento() String
-        +getCondutor() ClientePessoaFisica
-    }
+| Classe mãe | Classes filhas | Observação |
+|---|---|---|
+| `Pessoa` (abstrata) | `Cliente`, `Funcionario` | Nome e e-mail ficam em `Pessoa`; cada filha define o seu perfil em `getPerfil()` |
+| `Cliente` (abstrata) | `ClientePessoaFisica`, `ClientePessoaJuridica` | Cada tipo de cliente devolve o próprio documento e o próprio condutor |
+| `Pagamento` (abstrata) | `PagamentoCartao`, `PagamentoPix` | Cada forma de pagamento se descreve e se valida de um jeito |
 
-    class Funcionario {
-        -String cpf
-        -Cargo cargo
-        -LocalDate dataAdmissao
-        -boolean ativo
-        +isGerente() boolean
-        +getPerfil() String
-    }
+## Associações
 
-    class Loja {
-        -Integer id
-        -String nome
-        -String cidade
-        -String uf
-        -String endereco
-        -String telefone
-        -boolean ativa
-    }
+| Classe | Multiplicidade | Classe | Multiplicidade | Significado |
+|---|:---:|---|:---:|---|
+| `Veiculo` | * | `CategoriaVeiculo` | 1 | Todo veículo pertence a uma categoria |
+| `Veiculo` | * | `Loja` | 1 | Todo veículo está em uma loja |
+| `Manutencao` | * | `Veiculo` | 1 | Um veículo pode ter várias manutenções |
+| `Funcionario` | * | `Loja` | 1 | Todo funcionário trabalha em uma loja |
+| `Reserva` | * | `Cliente` | 1 | Um cliente pode fazer várias reservas |
+| `Reserva` | * | `CategoriaVeiculo` | 1 | A reserva é feita por categoria |
+| `Locacao` | 0..1 | `Reserva` | 1 | Uma reserva gera no máximo uma locação |
+| `Locacao` | * | `Veiculo` | 1 | O veículo é escolhido na retirada |
+| `Multa` | * | `Locacao` | 1 | Uma locação pode ter várias multas |
+| `Pagamento` | * | `Locacao` | 1 | Uma locação pode ser paga em várias partes |
 
-    class CategoriaVeiculo {
-        -Integer id
-        -String nome
-        -String descricao
-        -BigDecimal valorDiaria
-        -BigDecimal valorHoraExtra
-        -BigDecimal taxaDevolucaoOutraLoja
-        -BigDecimal valorCautela
-        +calcularEstimativa(LocalDateTime inicio, LocalDateTime fim) BigDecimal
-    }
-
-    class Veiculo {
-        -Integer id
-        -String placa
-        -String marca
-        -String modelo
-        -int ano
-        -String cor
-        -int quilometragem
-        -int capacidadeTanqueLitros
-        -StatusVeiculo status
-        +estaDisponivel() boolean
-    }
-
-    class Reserva {
-        -Integer id
-        -LocalDateTime dataRetiradaPrevista
-        -LocalDateTime dataDevolucaoPrevista
-        -BigDecimal valorEstimado
-        -Canal canal
-        -StatusReserva status
-        -LocalDateTime dataCriacao
-        -LocalDateTime dataCancelamento
-        -String justificativaCancelamento
-        +cancelar(String justificativa) void
-    }
-
-    class Locacao {
-        -Integer id
-        -LocalDateTime dataRetirada
-        -LocalDateTime dataDevolucaoPrevista
-        -LocalDateTime dataDevolucaoReal
-        -int kmSaida
-        -Integer kmChegada
-        -int combustivelSaida
-        -Integer combustivelChegada
-        -BigDecimal cautelaValor
-        -boolean cautelaLiberada
-        -BigDecimal valorDiariaContratada
-        -BigDecimal valorDiarias
-        -BigDecimal valorHorasExtras
-        -BigDecimal valorCombustivel
-        -BigDecimal taxaDevolucaoOutraLoja
-        -BigDecimal desconto
-        -BigDecimal valorFinal
-        -StatusLocacao status
-        +totalPago() BigDecimal
-        +saldoDevedor() BigDecimal
-    }
-
-    class Pagamento {
-        <<abstract>>
-        -Integer id
-        -BigDecimal valor
-        -LocalDateTime dataPagamento
-        +getForma() FormaPagamento
-        +descrever() String
-    }
-
-    class PagamentoCartao {
-        -FormaPagamento forma
-        -String bandeira
-        -String finalCartao
-        -int parcelas
-        +getForma() FormaPagamento
-        +descrever() String
-    }
-
-    class PagamentoPix {
-        -String txid
-        -String chavePix
-        +getForma() FormaPagamento
-        +descrever() String
-    }
-
-    class Multa {
-        -Integer id
-        -String descricao
-        -BigDecimal valor
-        -LocalDateTime dataInfracao
-        -LocalDateTime dataRegistro
-        -boolean paga
-    }
-
-    class Manutencao {
-        -Integer id
-        -TipoManutencao tipo
-        -String descricao
-        -LocalDate dataEntrada
-        -LocalDate dataSaida
-        -BigDecimal custo
-        -boolean concluida
-    }
-
-    class Cargo {
-        <<enumeration>>
-        ATENDENTE
-        GERENTE
-    }
-    class StatusVeiculo {
-        <<enumeration>>
-        DISPONIVEL
-        LOCADO
-        MANUTENCAO
-        INATIVO
-    }
-    class StatusReserva {
-        <<enumeration>>
-        ATIVA
-        CANCELADA
-        EFETIVADA
-    }
-    class StatusLocacao {
-        <<enumeration>>
-        ABERTA
-        ENCERRADA
-        PAGA
-    }
-    class FormaPagamento {
-        <<enumeration>>
-        CARTAO_CREDITO
-        CARTAO_DEBITO
-        PIX
-    }
-
-    Pessoa <|-- Cliente
-    Pessoa <|-- Funcionario
-    Cliente <|-- ClientePessoaFisica
-    Cliente <|-- ClientePessoaJuridica
-    Pagamento <|-- PagamentoCartao
-    Pagamento <|-- PagamentoPix
-
-    ClientePessoaJuridica --> ClientePessoaFisica : condutor responsável
-    Funcionario --> Loja : trabalha em
-    Veiculo --> CategoriaVeiculo : pertence a
-    Veiculo --> Loja : está em
-    Reserva --> Cliente : feita por
-    Reserva --> CategoriaVeiculo : categoria desejada
-    Reserva --> Loja : retirada e devolução
-    Reserva --> Funcionario : registrada por
-    Locacao --> Reserva : origina-se de
-    Locacao --> Veiculo : veículo
-    Locacao --> ClientePessoaFisica : condutor
-    Locacao "1" --> "0..*" Pagamento : recebe
-    Locacao "1" --> "0..*" Multa : gera
-    Veiculo "1" --> "0..*" Manutencao : passa por
-
-    Funcionario --> Cargo
-    Veiculo --> StatusVeiculo
-    Reserva --> StatusReserva
-    Locacao --> StatusLocacao
-    Pagamento --> FormaPagamento
-```
+No código, as associações são feitas pelo identificador da outra classe (por exemplo, `Veiculo.categoriaId`), da mesma forma que as chaves estrangeiras no banco.
 
 ## Conceitos de POO aplicados
 
 | Conceito | Onde aparece |
 |---|---|
-| **Encapsulamento** | Todos os atributos são `private`, acessados por getters e setters. Regras como `Reserva.cancelar` e `Locacao.saldoDevedor` ficam dentro das classes. |
-| **Herança** | `Pessoa` → `Cliente` → `ClientePessoaFisica`/`ClientePessoaJuridica`; `Pessoa` → `Funcionario`; `Pagamento` → `PagamentoCartao`/`PagamentoPix`. |
-| **Polimorfismo** | `Cliente.getDocumento()` devolve CPF ou CNPJ conforme a subclasse; `Cliente.getCondutor()` devolve a própria pessoa física ou o condutor responsável da empresa; `Pagamento.descrever()` e `getForma()` mudam em cada tipo de pagamento. |
-| **Classe abstrata** | `Pessoa`, `Cliente` e `Pagamento` não são instanciadas diretamente. |
-| **Enumerações** | `Cargo`, `StatusVeiculo`, `StatusReserva`, `StatusLocacao`, `FormaPagamento` (além de `Canal`, `TipoManutencao` etc.). |
+| **Encapsulamento** | Todos os atributos são privados (`-`) e acessados por getters e setters. Regras como `Reserva.cancelar()` e `Locacao.saldoDevedor()` ficam dentro das próprias classes. |
+| **Herança** | `Pessoa` → `Cliente` → `ClientePessoaFisica` / `ClientePessoaJuridica`; `Pessoa` → `Funcionario`; `Pagamento` → `PagamentoCartao` / `PagamentoPix`. |
+| **Polimorfismo** | `getPerfil()` devolve "CLIENTE" ou o cargo do funcionário; `getDocumento()` devolve o CPF ou o CNPJ; `getCondutor()` devolve a própria pessoa física ou o condutor responsável da empresa; `getForma()` e `descrever()` mudam conforme o tipo de pagamento. |
+| **Classe abstrata** | `Pessoa`, `Cliente` e `Pagamento` não são instanciadas diretamente; os métodos abstratos aparecem em itálico no diagrama. |
 
 ## Correspondência com o banco de dados
 
@@ -248,7 +56,7 @@ classDiagram
 | `Pessoa` + `Funcionario` | `pessoa` + `funcionario` |
 | `Cliente` + `ClientePessoaFisica` / `ClientePessoaJuridica` | `pessoa` + `cliente` + `cliente_pf` / `cliente_pj` |
 | `Pagamento` + `PagamentoCartao` / `PagamentoPix` | `pagamento` + `pagamento_cartao` / `pagamento_pix` |
-| `Loja`, `CategoriaVeiculo`, `Veiculo`, `Reserva`, `Locacao`, `Multa`, `Manutencao` | `loja`, `categoria_veiculo`, `veiculo`, `reserva`, `locacao`, `multa`, `manutencao` |
+| `Loja`, `CategoriaVeiculo`, `Veiculo`, `Manutencao` | `loja`, `categoria_veiculo`, `veiculo`, `manutencao` |
+| `Reserva`, `Locacao`, `Multa` | `reserva`, `locacao`, `multa` |
 
-Os métodos abstratos (`getPerfil`, `getDocumento`, `getCondutor`, `getForma`, `descrever`) são implementados nas
-subclasses indicadas no diagrama. As classes de acesso a dados (DAO) e de serviço aparecem no diagrama de sequência.
+O diagrama relacional está em [`docs/diagrama-relacional.md`](../diagrama-relacional.md). As classes de acesso a dados (DAO) e de serviço aparecem nos [diagramas de sequência](diagrama-de-sequencia.md).
