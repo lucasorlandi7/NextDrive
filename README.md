@@ -68,7 +68,7 @@ O funcionamento geral do sistema contempla:
 | RF13 | Disponibilizar o histórico de locações dos clientes. | PII |
 | RF14 | Disponibilizar relatórios administrativos por meio de views. | BDII |
 | RF15 | Impedir locações conflitantes para o mesmo veículo e atualizar seu status automaticamente por meio de trigger. | BDII |
-| RF16 | Impedir locações quando o contratante for menor de 21 anos ou possuir CNH emitida há menos de 2 anos, por meio de trigger. | BDII |
+| RF16 | Impedir locações quando o condutor for menor de 21 anos ou possuir CNH emitida há menos de 2 anos, por meio de trigger. | BDII |
 | RF17 | Registrar auditoria das alterações realizadas em pagamentos e preços por meio de trigger. | BDII |
 | RF18 | Controlar o acesso ao banco de dados por perfis, usuários e privilégios, além de permitir backup e restauração. | BDII |
 | RF19 | Elaborar o diagrama de casos de uso com os atores Cliente, Atendente e Gerente. | ESI |
@@ -113,7 +113,7 @@ O projeto está organizado da seguinte forma:
 
 ```text
 NextDrive/
-├── documentos/
+├── docs/
 │   ├── telas/
 │   ├── uml/
 │   │   ├── diagrama-de-atividades.md
@@ -127,7 +127,7 @@ NextDrive/
 │   ├── artigo.md
 │   ├── backup-restauração.md
 │   ├── diagrama-relacional.md
-│   ├── diagrama-relacional.png
+│   ├── diagrama-relacional.jpeg
 │   ├── dicionario-de-dados.md
 │   └── politicas-de-acesso.md
 ├── java/
@@ -144,18 +144,18 @@ NextDrive/
 |---|---|
 | Enunciado do trabalho | `Enunciado_Trabalho_A1.pdf` |
 | Levantamento de requisitos | `Levantamento de Requisitos.docx` |
-| Descrição do modelo de negócio | `documentos/artigo.md` |
-| Diagrama entidade-relacionamento | `documentos/diagrama-relacional.png` |
-| Documentação do modelo relacional | `documentos/diagrama-relacional.md` |
-| Diagramas UML | `documentos/uml/` |
-| Diagrama de casos de uso | `documentos/uml/diagrama-de-casos-de-uso.md` |
-| Diagramas de sequência | `documentos/uml/` |
-| Capturas de tela | `documentos/telas/` |
-| Dicionário de dados | `documentos/dicionario-de-dados.md` |
-| Políticas de acesso | `documentos/politicas-de-acesso.md` |
-| Scripts do banco de dados | `SQL/` |
-| Aplicação Java | `Java/` |
-| Artigo completo | `documentos/artigo.md` |
+| Descrição do modelo de negócio | `docs/artigo.md` |
+| Diagrama entidade-relacionamento | `docs/diagrama-relacional.png` |
+| Documentação do modelo relacional | `docs/diagrama-relacional.md` |
+| Diagramas UML | `docs/uml/` |
+| Diagrama de casos de uso | `docs/uml/diagrama-de-casos-de-uso.md` |
+| Diagramas de sequência | `docs/uml/` |
+| Capturas de tela | `docs/telas/` |
+| Dicionário de dados | `docs/dicionario-de-dados.md` |
+| Políticas de acesso | `docs/politicas-de-acesso.md` |
+| Scripts do banco de dados | `sql/` |
+| Aplicação Java | `java/` |
+| Artigo completo | `docs/artigo.md` |
 
 
 
@@ -167,7 +167,7 @@ A estrutura contempla clientes, funcionários, veículos, categorias, lojas, res
 
 ### 7.1 Scripts do banco de dados
 
-Os scripts estão disponíveis na pasta `SQL/` e devem ser executados na ordem apresentada abaixo.
+Os scripts estão disponíveis na pasta `sql/` e devem ser executados na ordem apresentada abaixo.
 
 | Ordem | Arquivo | Finalidade |
 |---|---|---|
@@ -198,10 +198,10 @@ O banco de dados utiliza os seguintes recursos:
 
 ### 7.3 Documentação complementar
 
-- Modelo relacional: `documentos/diagrama-relacional.png`.
-- Definitivo de dados: `documentos/dicionario-de-dados.md`.
-- Políticas de acesso: `documentos/politicas-de-acesso.md`.
-- Procedimentos de backup: `documentos/backup-restauração.md`.
+- Modelo relacional: `docs/diagrama-relacional.png`.
+- Dicionario de dados: `docs/dicionario-de-dados.md`.
+- Políticas de acesso: `docs/politicas-de-acesso.md`.
+- Procedimentos de backup: `docs/backup-restauração.md`.
 
 
 
@@ -229,7 +229,7 @@ Os diagramas UML documentam a estrutura, o comportamento e os principais process
 
 As capturas de tela apresentam as principais interfaces e funcionalidades desenvolvidas no sistema Next Drive.
 
-Os arquivos de imagem estão organizados na pasta `documentos/telas/`.
+Os arquivos de imagem estão organizados na pasta `docs/telas/`.
 
 As telas documentam as principais operações do sistema, incluindo:
 
@@ -247,15 +247,15 @@ As capturas também são utilizadas para ilustrar o funcionamento do sistema no 
 
 ## 10. Como executar
 
+
 ### 10.1 Banco de dados
 
 **Requisitos:** PostgreSQL 16 ou superior e DBeaver.
 
 1. Instale e configure o PostgreSQL.
 2. Abra o DBeaver e conecte-se ao servidor PostgreSQL.
-3. Acesse a pasta `SQL/` do repositório.
-4. Consulte o arquivo `SQL/README.md` para verificar as instruções.
-5. Execute os scripts de criação e configuração na ordem indicada na documentação:
+3. Acesse a pasta `sql/` do repositório.
+4. Execute os scripts SQL na seguinte ordem:
 
 | Ordem | Script |
 |---|---|
@@ -268,35 +268,72 @@ As capturas também são utilizadas para ilustrar o funcionamento do sistema no 
 | 7 | `07_roles_privilegios.sql` |
 | 8 | `08_gatilhos.sql` |
 | 9 | `09_procedimentos.sql` |
-| 10 | `10_backup_restore.sh` |
-| 11 | `11_testes_regras.sql` |
+| 10 | `11_testes_regras.sql` |
 
-**Atenção:** o arquivo `10_backup_restore.sh` é um script de terminal, não deve ser executado como SQL no DBeaver. O primeiro script pode apagar e recriar o banco caso ele já exista. Faça backup antes de executá-lo em um banco com dados importantes.
+**Backup e restauração:** o arquivo `10_backup_restore.sh` deve ser executado separadamente pelo terminal, e não pelo DBeaver.
+
+**Atenção:** o primeiro script pode apagar e recriar o banco caso ele já exista. Faça backup antes de executá-lo em um banco com dados importantes.
+
 
 ### 10.2 Aplicação Java
 
-1. Instale e configure o Java.
-2. Abra a pasta `Java/` no ambiente de desenvolvimento utilizado pelo projeto.
-3. Configure os parâmetros de conexão com o PostgreSQL.
-4. Execute a aplicação conforme a configuração e as instruções disponíveis no projeto.
+**Requisitos:** JDK 17 ou superior e Maven 3.8 ou superior.
+
+1. Acesse a pasta `java/` do repositório.
+2. Configure a conexão com o PostgreSQL conforme as instruções do arquivo `java/README.md`.
+3. Abra o terminal dentro da pasta `java/`.
+4. Execute o comando para compilar e iniciar a aplicação:
+
+```bash
+mvn compile exec:java
+```
+
+5. Após iniciar o servidor, acesse pelo navegador:
+
+http://localhost:8080
+
+**Gerar o arquivo JAR:**
+
+```bash
+mvn package
+```
+
+**Executar o JAR:**
+
+```bash
+java -jar target/nextdrive-jar-with-dependencies.jar
+```
+
+Para mais informações sobre configuração e utilização, consulte `java/README.md`.
+
 
 
 ## 11. Organização do desenvolvimento
 
-O desenvolvimento é realizado de forma colaborativa, utilizando GitHub para versionamento e organização das atividades.
+O desenvolvimento do Next Drive foi organizado de forma colaborativa, com divisão das atividades entre os integrantes da equipe e acompanhamento das tarefas durante o projeto.
 
-As disciplinas estão integradas no desenvolvimento:
+### 11.1 Planejamento das atividades
 
-- PII: implementação e orientação a objetos.
-- ESI: análise, modelagem e documentação UML.
-- BDII: modelagem, implementação e administração do banco de dados.
+As atividades foram distribuídas considerando os módulos do sistema e os requisitos das disciplinas de Programação II, Engenharia de Software I e Banco de Dados II.
+
+O planejamento e o acompanhamento das tarefas foram realizados por meio do GitHub Projects, permitindo organizar as atividades, acompanhar seu andamento e identificar as responsabilidades de cada integrante.
+
+### 11.2 Versionamento
+
+O código-fonte e a documentação do projeto foram mantidos em um repositório GitHub, utilizando Git para controle de versão.
+
+O versionamento permitiu registrar as alterações realizadas, integrar as contribuições dos integrantes e manter o histórico de desenvolvimento do sistema.
+
+**Repositório do projeto:**  
+https://github.com/lucasorlandi7/NextDrive
+
 
 ## 12. Desenvolvedores
 
 | Integrante | Responsabilidades principais |
 |---|---|
 | Lucas Orlandi | Reservas e controle de locações |
-| Samuel Garlow | Pagamentos, multas, relatórios e documentação |
+| Samuel Gralow | Pagamentos, multas, relatórios e documentação |
 | Diogo Rodrigo Nielsson | Veículos, lojas e manutenção |
 | Felipe Kremer | Clientes, funcionários e autenticação |
 
