@@ -1,6 +1,6 @@
 -- =====================================================================
 -- Next Drive - 03_indices.sql : índices (RF01)
--- Executar:  psql -U postgres -d next_drive -f sql/03_indexes.sql
+-- Executar:  psql -U postgres -d next_drive -f sql/03_indices.sql
 --
 -- Já existem índices únicos criados automaticamente pelas constraints
 -- UNIQUE do script 02 e cobrem as colunas mais consultadas do RF01:
