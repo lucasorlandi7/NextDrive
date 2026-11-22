@@ -3,11 +3,11 @@
 # Next Drive - 10_backup_restauração.sh : rotina de backup e restauração (RF18)
 #
 # Uso:
-#   ./sql/10_backup_restore.sh backup               backup completo do banco (formato custom)
-#   ./sql/10_backup_restore.sh globais              backup dos usuários/grupos (roles) do servidor
-#   ./sql/10_backup_restore.sh listar               lista os backups existentes
-#   ./sql/10_backup_restore.sh verificar <arquivo>  confere se o arquivo de backup está íntegro
-#   ./sql/10_backup_restore.sh restore <arquivo> [banco_destino]
+#   ./sql/10_backup_restauração.sh backup              backup completo do banco (formato custom)
+#   ./sql/10_backup_restauração.sh globais              backup dos usuários/grupos (roles) do servidor
+#   ./sql/10_backup_restauração.sh listar               lista os backups existentes
+#   ./sql/10_backup_restauração.sh verificar <arquivo>  confere se o arquivo de backup está íntegro
+#   ./sql/10_backup_restauração.sh restore <arquivo> [banco_destino]
 #                                                   restaura em um banco NOVO (padrão: next_drive_restore)
 #
 # Variáveis de ambiente (todas opcionais):
