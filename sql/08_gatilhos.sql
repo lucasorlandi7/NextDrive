@@ -1,6 +1,6 @@
 -- =====================================================================
 -- Next Drive - 08_gatilhos.sql : gatilhos (triggers) de integridade e auditoria
--- Executar:  psql -U postgres -d next_drive -f sql/08_triggers.sql
+-- Executar:  psql -U postgres -d next_drive -f sql/08_gatilhos.sql
 --
 -- Triggers implementados:
 --   1. trg_locacao_conflito          RF15 / RN03 / RN04  impede locações conflitantes
