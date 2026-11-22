@@ -768,7 +768,7 @@ Os scripts ficam em [`sql/`](../sql/) e devem ser executados na ordem abaixo (ve
 | 5 | `05_dados_exemplo.sql` | Dados de teste |
 | 6 | `06_consultas_relatorios.sql` | SELECTs dos relatórios R01 a R13 |
 | 7 | `07_roles_privilegios.sql` | Perfis e privilégios |
-| 8 | `08_triggers.sql` | 8 *triggers* |
+| 8 | `08_gatilhos.sql` | 8 *triggers* |
 | 9 | `09_procedimentos.sql` | 4 *procedures* e função de login |
 | 10 | `10_backup_restauração.sh` | Backup e restauração |
 | 11 | `11_testes_regras.sql` | 34 verificações automáticas das regras |
