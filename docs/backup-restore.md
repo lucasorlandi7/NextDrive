@@ -1,6 +1,6 @@
 # Política e Configuração de Backup e Restauração — Next Drive
 
-Rotina implementada em `sql/10_backup_restore.sh` (RF18), testada com backup completo e restauração em um banco novo.
+Rotina implementada em `sql/10_backup_restauração.sh` (RF18), testada com backup completo e restauração em um banco novo.
 
 ## Política
 
@@ -19,29 +19,29 @@ Rotina implementada em `sql/10_backup_restore.sh` (RF18), testada com backup com
 
 ```bash
 # backup completo -> backups/next_drive_AAAAMMDD_HHMMSS.dump
-./sql/10_backup_restore.sh backup
+./sql/10_backup_restauração.sh backup
 
 # usuários e grupos do servidor -> backups/roles_AAAAMMDD_HHMMSS.sql
-./sql/10_backup_restore.sh globais
+./sql/10_backup_restauração.sh globais
 
 # conferir se um backup está íntegro
-./sql/10_backup_restore.sh verificar backups/next_drive_20261109_231945.dump
+./sql/10_backup_restauração.sh verificar backups/next_drive_20261109_231945.dump
 
 # restaurar em um banco NOVO (padrão: next_drive_restore)
-./sql/10_backup_restore.sh restore backups/next_drive_20261109_231945.dump
+./sql/10_backup_restauração.sh restore backups/next_drive_20261109_231945.dump
 
 # listar backups
-./sql/10_backup_restore.sh listar
+./sql/10_backup_restauração.sh listar
 ```
 
 Variáveis opcionais: `DB_NAME` (padrão `next_drive`), `DB_USER` (`postgres`), `DB_HOST` (`localhost`),
 `DB_PORT` (`5432`), `BACKUP_DIR` (`./backups`) e `RETENCAO_DIAS` (`7`). Se o seu banco tem outro nome:
-`DB_NAME=nextdrive ./sql/10_backup_restore.sh backup`.
+`DB_NAME=nextdrive ./sql/10_backup_restauração.sh backup`.
 
 ### Agendamento diário (cron)
 
 ```cron
-0 2 * * *  cd /caminho/do/projeto && PGPASSWORD=... DB_USER=postgres ./sql/10_backup_restore.sh backup >> backups/backup.log 2>&1
+0 2 * * *  cd /caminho/do/projeto && PGPASSWORD=... DB_USER=postgres ./sql/10_backup_restauração.sh backup >> backups/backup.log 2>&1
 ```
 
 ## Backup e restauração no Windows
@@ -76,7 +76,7 @@ pg_restore -h localhost -U postgres -d next_drive_restore -t pagamento -t pagame
 ## Procedimento de recuperação de desastre
 
 1. Reinstalar o PostgreSQL e restaurar os usuários: `psql -U postgres -f backups/roles_AAAAMMDD_HHMMSS.sql`.
-2. Restaurar o banco: `./sql/10_backup_restore.sh restore backups/next_drive_AAAAMMDD_HHMMSS.dump next_drive`.
+2. Restaurar o banco: `./sql/10_backup_restauração.sh restore backups/next_drive_AAAAMMDD_HHMMSS.dump next_drive`.
 3. Conferir: número de tabelas (17), contagem de locações e pagamentos, e os 8 triggers (`SELECT count(*) FROM pg_trigger WHERE NOT tgisinternal;`).
 4. Apontar a aplicação para o banco restaurado.
 
