@@ -1,6 +1,6 @@
 -- =====================================================================
--- Next Drive - 09_procedures.sql : stored procedures e função de login
--- Executar:  psql -U postgres -d next_drive -f sql/09_procedures.sql
+-- Next Drive - 09_procedimentos.sql : stored procedures e função de login
+-- Executar:  psql -U postgres -d next_drive -f sql/09_procedimentos.sql
 -- Requer PostgreSQL 11 ou superior (CREATE PROCEDURE / CALL).
 --
 -- Procedures:
