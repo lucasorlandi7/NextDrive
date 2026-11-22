@@ -1,4 +1,3 @@
-
 # Next Drive — Sistema de Aluguel de Veículos
 
 Sistema web para gerenciamento de aluguel de veículos em uma locadora com várias lojas. O sistema contempla o processo de reserva, retirada, devolução, pagamento e pós-locação, incluindo o registro de multas e a liberação da caução.
@@ -118,16 +117,14 @@ NextDrive/
 │   ├── uml/
 │   │   ├── diagrama-de-atividades.md
 │   │   ├── diagrama-de-casos-de-uso.md
-│   │   ├── diagrama-de-classes.md
+│   │   ├── diagrama-de-classe.jpeg
 │   │   ├── diagrama-de-estados.md
-│   │   ├── diagrama-de-sequencia.md
+│   │   ├── diagrama-relacional.jpeg
+│   │   ├── diagrama-sequencia-devolucao-pagamento.jpeg
 │   │   ├── diagrama-sequencia-reserva.jpeg
-│   │   ├── diagrama-sequencia-retirada.jpeg
-│   │   └── diagrama-sequencia-devolucao-pagamento.jpeg
+│   │   └── diagrama-sequencia-retirada.jpeg
 │   ├── artigo.md
-│   ├── backup-restauração.md
-│   ├── diagrama-relacional.md
-│   ├── diagrama-relacional.jpeg
+│   ├── backup-restore.md
 │   ├── dicionario-de-dados.md
 │   └── politicas-de-acesso.md
 ├── java/
@@ -142,22 +139,18 @@ NextDrive/
 
 | Item | Onde está |
 |---|---|
-| Enunciado do trabalho | `Enunciado_Trabalho_A1.pdf` |
-| Levantamento de requisitos | `Levantamento de Requisitos.docx` |
-| Descrição do modelo de negócio | `docs/artigo.md` |
-| Diagrama entidade-relacionamento | `docs/diagrama-relacional.png` |
-| Documentação do modelo relacional | `docs/diagrama-relacional.md` |
-| Diagramas UML | `docs/uml/` |
-| Diagrama de casos de uso | `docs/uml/diagrama-de-casos-de-uso.md` |
-| Diagramas de sequência | `docs/uml/` |
-| Capturas de tela | `docs/telas/` |
-| Dicionário de dados | `docs/dicionario-de-dados.md` |
-| Políticas de acesso | `docs/politicas-de-acesso.md` |
-| Scripts do banco de dados | `sql/` |
-| Aplicação Java | `java/` |
-| Artigo completo | `docs/artigo.md` |
-
-
+| Enunciado do trabalho | [`Enunciado_Trabalho_A1.pdf`](Enunciado_Trabalho_A1.pdf) |
+| Levantamento de requisitos | [`Levantamento de Requisitos.docx`](Levantamento%20de%20Requisitos.docx) |
+| Artigo completo | [`docs/artigo.md`](docs/artigo.md) |
+| Descrição do modelo de negócio | [Artigo, seção 2](docs/artigo.md#2-modelo-de-negócio) |
+| Diagrama relacional | [Artigo, seção 4](docs/artigo.md#4-modelagem-do-banco-de-dados) · [imagem](docs/uml/diagrama-relacional.jpeg) |
+| Dicionário de dados | [`docs/dicionario-de-dados.md`](docs/dicionario-de-dados.md) |
+| Scripts do banco de dados | [`sql/`](sql/) |
+| Políticas de acesso | [`docs/politicas-de-acesso.md`](docs/politicas-de-acesso.md) |
+| Backup e restauração | [`docs/backup-restore.md`](docs/backup-restore.md) |
+| Diagramas UML | [`docs/uml/`](docs/uml/) · [seção 8 deste README](#8-diagramas-uml) |
+| Aplicação Java | [`java/`](java/) |
+| Capturas de tela | [`docs/telas/`](docs/telas/) |
 
 ## 7. Banco de dados
 
@@ -167,11 +160,11 @@ A estrutura contempla clientes, funcionários, veículos, categorias, lojas, res
 
 ### 7.1 Scripts do banco de dados
 
-Os scripts estão disponíveis na pasta `sql/` e devem ser executados na ordem apresentada abaixo.
+Os scripts estão disponíveis na pasta [`sql/`](sql/) e devem ser executados na ordem apresentada abaixo.
 
 | Ordem | Arquivo | Finalidade |
 |---|---|---|
-| 1 | `01_create_database.sql` | Criação do banco de dados `next_drive`. |
+| 1 | `01_create_database.sql` | Criação do banco de dados (opcional; veja a seção 10.1). |
 | 2 | `02_create_tables.sql` | Criação das tabelas, extensão `pgcrypto`, chaves e restrições. |
 | 3 | `03_indices.sql` | Criação dos índices para otimização das consultas. |
 | 4 | `04_views.sql` | Criação de views e da função `fn_veiculos_disponiveis`. |
@@ -180,7 +173,7 @@ Os scripts estão disponíveis na pasta `sql/` e devem ser executados na ordem a
 | 7 | `07_roles_privilegios.sql` | Criação de grupos, usuários e privilégios de acesso. |
 | 8 | `08_gatilhos.sql` | Criação de triggers para validações e auditoria. |
 | 9 | `09_procedimentos.sql` | Criação de procedures e da função `fn_autenticar`. |
-| 10 | `10_backup_restore.sh` | Rotinas de backup e restauração do banco de dados. |
+| 10 | `10_backup_restauração.sh` | Rotinas de backup e restauração do banco de dados. |
 | 11 | `11_testes_regras.sql` | Execução de 34 verificações das regras de negócio. |
 
 ### 7.2 Recursos implementados no banco
@@ -198,15 +191,12 @@ O banco de dados utiliza os seguintes recursos:
 
 ### 7.3 Documentação complementar
 
-- Modelo relacional: `docs/diagrama-relacional.png`.
-- Dicionario de dados: `docs/dicionario-de-dados.md`.
-- Políticas de acesso: `docs/politicas-de-acesso.md`.
-- Procedimentos de backup: `docs/backup-restauração.md`.
-
-
+- Modelo relacional: [`docs/uml/diagrama-relacional.jpeg`](docs/uml/diagrama-relacional.jpeg) e [artigo, seção 4](docs/artigo.md#4-modelagem-do-banco-de-dados).
+- Dicionário de dados: [`docs/dicionario-de-dados.md`](docs/dicionario-de-dados.md).
+- Políticas de acesso: [`docs/politicas-de-acesso.md`](docs/politicas-de-acesso.md).
+- Procedimentos de backup: [`docs/backup-restore.md`](docs/backup-restore.md).
 
 ## 8. Diagramas UML
-
 
 Os diagramas UML documentam a estrutura, o comportamento e os principais processos do sistema Next Drive. Clique no link para abrir a imagem do diagrama.
 
@@ -221,15 +211,11 @@ Os diagramas UML documentam a estrutura, o comportamento e os principais process
 | Atividades | [Ver diagrama de atividades](docs/uml/diagrama-de-atividades.md) | [Seção 6.4](docs/artigo.md#64-atividades-rf22) |
 | Estados | [Ver diagramas de estados](docs/uml/diagrama-de-estados.md) | [Seção 6.5](docs/artigo.md#65-estados-rf23) |
 
-
-
-
-
 ## 9. Telas do sistema
 
 As capturas de tela apresentam as principais interfaces e funcionalidades desenvolvidas no sistema Next Drive.
 
-Os arquivos de imagem estão organizados na pasta `docs/telas/`.
+Os arquivos de imagem estão organizados na pasta [`docs/telas/`](docs/telas/).
 
 As telas documentam as principais operações do sistema, incluindo:
 
@@ -243,44 +229,38 @@ As telas documentam as principais operações do sistema, incluindo:
 
 As capturas também são utilizadas para ilustrar o funcionamento do sistema no artigo do projeto.
 
-
-
 ## 10. Como executar
-
 
 ### 10.1 Banco de dados
 
 **Requisitos:** PostgreSQL 16 ou superior e DBeaver.
 
 1. Instale e configure o PostgreSQL.
-2. Abra o DBeaver e conecte-se ao servidor PostgreSQL.
-3. Acesse a pasta `sql/` do repositório.
-4. Execute os scripts SQL na seguinte ordem:
+2. Abra o DBeaver, conecte-se ao servidor PostgreSQL e crie um banco chamado **`nextdrive`** (sem sublinhado), que é o nome que a aplicação Java usa.
+3. Abra uma conexão nesse banco e execute os scripts da pasta [`sql/`](sql/) na ordem abaixo, usando *Execute Script* (`Alt+X`):
 
 | Ordem | Script |
 |---|---|
-| 1 | `01_create_database.sql` |
-| 2 | `02_create_tables.sql` |
-| 3 | `03_indices.sql` |
-| 4 | `04_views.sql` |
-| 5 | `05_dados_exemplo.sql` |
-| 6 | `06_consultas_relatorios.sql` |
-| 7 | `07_roles_privilegios.sql` |
-| 8 | `08_gatilhos.sql` |
-| 9 | `09_procedimentos.sql` |
-| 10 | `11_testes_regras.sql` |
+| 1 | `02_create_tables.sql` |
+| 2 | `03_indices.sql` |
+| 3 | `04_views.sql` |
+| 4 | `05_dados_exemplo.sql` |
+| 5 | `06_consultas_relatorios.sql` |
+| 6 | `07_roles_privilegios.sql` |
+| 7 | `08_gatilhos.sql` |
+| 8 | `09_procedimentos.sql` |
+| 9 | `11_testes_regras.sql` (opcional: 34 verificações das regras; desfaz tudo no final) |
 
-**Backup e restauração:** o arquivo `10_backup_restore.sh` deve ser executado separadamente pelo terminal, e não pelo DBeaver.
+**Atenção:** o script `01_create_database.sql` cria um banco com outro nome (`next_drive`) e apaga o banco se ele já existir, por isso não é usado neste passo a passo. O arquivo `10_backup_restauração.sh` é um script de terminal e deve ser executado separadamente, não pelo DBeaver. Mais detalhes em [`sql/README.md`](sql/README.md) e [`docs/backup-restore.md`](docs/backup-restore.md).
 
-**Atenção:** o primeiro script pode apagar e recriar o banco caso ele já exista. Faça backup antes de executá-lo em um banco com dados importantes.
-
+**Usuários de exemplo** (senha `Senha@123`): cliente `ana.lima@example.com`, atendente `juliana.prado@nextdrive.example` e gerente `marcos.almeida@nextdrive.example`.
 
 ### 10.2 Aplicação Java
 
 **Requisitos:** JDK 17 ou superior e Maven 3.8 ou superior.
 
 1. Acesse a pasta `java/` do repositório.
-2. Configure a conexão com o PostgreSQL conforme as instruções do arquivo `java/README.md`.
+2. Configure a conexão com o PostgreSQL conforme as instruções do arquivo [`java/README.md`](java/README.md).
 3. Abra o terminal dentro da pasta `java/`.
 4. Execute o comando para compilar e iniciar a aplicação:
 
@@ -306,8 +286,6 @@ java -jar target/nextdrive-jar-with-dependencies.jar
 
 Para mais informações sobre configuração e utilização, consulte `java/README.md`.
 
-
-
 ## 11. Organização do desenvolvimento
 
 O desenvolvimento do Next Drive foi organizado de forma colaborativa, com divisão das atividades entre os integrantes da equipe e acompanhamento das tarefas durante o projeto.
@@ -326,7 +304,6 @@ O versionamento permitiu registrar as alterações realizadas, integrar as contr
 
 **Repositório do projeto:**  
 https://github.com/lucasorlandi7/NextDrive
-
 
 ## 12. Desenvolvedores
 
