@@ -76,7 +76,7 @@ Os requisitos completos (RF01 a RF24, RNF01 a RNF09 e regras de negócio RN01 a 
 
 | Requisito | Descrição resumida | Onde foi atendido |
 |---|---|---|
-| RF01 | Índices nas colunas mais consultadas | `sql/03_indexes.sql` e índices únicos de `02_create_tables.sql` |
+| RF01 | Índices nas colunas mais consultadas | `sql/03_indices.sql` e índices únicos de `02_create_tables.sql` |
 | RF02 | Login com e-mail e senha | `fn_autenticar`; `AutenticacaoService`; tela de login |
 | RF03 | Gerente gerencia funcionários | `GerenteControlador` (/gerente/funcionarios); privilégios do grupo gerente |
 | RF04 | Cadastro de clientes PF e PJ, inclusive pelo site | Cadastro no site (`/cadastro`) e no balcão (`/atendente/cliente/novo`) |
@@ -93,7 +93,7 @@ Os requisitos completos (RF01 a RF24, RNF01 a RNF09 e regras de negócio RN01 a 
 | RF15 | Impedir locações conflitantes | Trigger `trg_locacao_conflito` e `trg_locacao_atualiza_veiculo` |
 | RF16 | Condutor com 21 anos ou mais e CNH com 2 anos ou mais | Trigger `trg_locacao_valida_condutor` |
 | RF17 | Auditoria de pagamentos e preços | Triggers `trg_auditoria_pagamento` e `trg_auditoria_preco` |
-| RF18 | Perfis de acesso, backup e restauração | `07_roles_privilegios.sql`; `10_backup_restore.sh` |
+| RF18 | Perfis de acesso, backup e restauração | `07_roles_privilegios.sql`; `10_backup_restauração.sh` |
 | RF19 a RF23 | Diagramas UML | Seção 6 |
 | RF24 | Multas de trânsito vinculadas à locação | Tabela `multa`; trigger `trg_multa_libera_cautela` |
 
@@ -763,14 +763,14 @@ Os scripts ficam em [`sql/`](../sql/) e devem ser executados na ordem abaixo (ve
 |---|---|---|
 | 1 | `01_create_database.sql` | Criação do banco de dados |
 | 2 | `02_create_tables.sql` | Tabelas, chaves, *constraints* de domínio |
-| 3 | `03_indexes.sql` | Índices (RF01) |
+| 3 | `03_indices.sql` | Índices (RF01) |
 | 4 | `04_views.sql` | Views e função de disponibilidade |
 | 5 | `05_dados_exemplo.sql` | Dados de teste |
 | 6 | `06_consultas_relatorios.sql` | SELECTs dos relatórios R01 a R13 |
 | 7 | `07_roles_privilegios.sql` | Perfis e privilégios |
 | 8 | `08_triggers.sql` | 8 *triggers* |
-| 9 | `09_procedures.sql` | 4 *procedures* e função de login |
-| 10 | `10_backup_restore.sh` | Backup e restauração |
+| 9 | `09_procedimentos.sql` | 4 *procedures* e função de login |
+| 10 | `10_backup_restauração.sh` | Backup e restauração |
 | 11 | `11_testes_regras.sql` | 34 verificações automáticas das regras |
 
 ### 5.1 Criação da base
@@ -1218,12 +1218,12 @@ COMMENT ON COLUMN pessoa.senha_hash                IS 'Hash bcrypt da senha (nun
 Além dos índices únicos criados pelas restrições (placa, CPF, CNPJ, e-mail), foram criados índices para o período de reservas, chaves estrangeiras usadas em junções e índices parciais para os filtros mais frequentes (por exemplo, apenas reservas ativas).
 
 <details>
-<summary>03_indexes.sql</summary>
+<summary>03_indices.sql</summary>
 
 ```sql
 -- =====================================================================
--- Next Drive - 03_indexes.sql : índices (RF01)
--- Executar:  psql -U postgres -d next_drive -f sql/03_indexes.sql
+-- Next Drive - 03_indices.sql : índices (RF01)
+-- Executar:  psql -U postgres -d next_drive -f sql/03_indices.sql
 --
 -- Já existem índices únicos criados automaticamente pelas constraints
 -- UNIQUE do script 02 e cobrem as colunas mais consultadas do RF01:
@@ -1458,7 +1458,7 @@ São oito gatilhos, que implementam as regras que o banco precisa garantir sozin
 | `trg_manutencao_status_veiculo` | `manutencao` | Coloca o veículo em manutenção e o devolve à frota ao concluir (RN04, RN11) |
 | `trg_multa_libera_cautela` | `multa` | Libera a cautela quando a última multa pendente é paga |
 
-O código está em [`sql/08_triggers.sql`](../sql/08_triggers.sql).
+O código está em [`sql/08_gatilhos.sql`](../sql/08_gatilhos.sql).
 
 ### 5.7 Procedures
 
@@ -1470,7 +1470,7 @@ O código está em [`sql/08_triggers.sql`](../sql/08_triggers.sql).
 | `sp_registrar_pagamento` | Registra pagamento em cartão ou PIX, quita a locação e libera a cautela quando cabível (RF11, RN12) |
 | `fn_autenticar` | Valida e-mail e senha (bcrypt) e devolve apenas pessoa, nome e perfil (RF02) |
 
-O código está em [`sql/09_procedures.sql`](../sql/09_procedures.sql).
+O código está em [`sql/09_procedimentos.sql`](../sql/09_procedimentos.sql).
 
 ### 5.8 Perfis e políticas de acesso
 
@@ -1552,7 +1552,7 @@ O código está em [`sql/07_roles_privilegios.sql`](../sql/07_roles_privilegios.
 
 O script também recusa restaurar sobre um banco que já existe, evitando sobrescrever dados por engano.
 
-O script está em [`sql/10_backup_restore.sh`](../sql/10_backup_restore.sh) e o passo a passo (Linux e Windows) em [`docs/backup-restore.md`](backup-restore.md).
+O script está em [`sql/10_backup_restauração.sh`](../sql/10_backup_restaura%C3%A7%C3%A3o.sh) e o passo a passo (Linux e Windows) em [`docs/backup-restore.md`](backup-restore.md).
 
 ---
 
