@@ -1124,38 +1124,47 @@ flowchart LR
 depois de uma devolução (pós-locação).
 
 
-### 6.2 Classes (RF20)
+### 6.2 Classes (RF19)
 
-Modelo de domínio em Java (pacote `br.edu.unoesc.nextdrive.model`), consistente com o banco de dados
-(RNF09). As duas hierarquias de herança pedidas no RF20 são destacadas:
-
-- **Pessoa** → `Cliente` → `ClientePessoaFisica` / `ClientePessoaJuridica`, e **Pessoa** → `Funcionario`;
-- **Pagamento** → `PagamentoCartao` / `PagamentoPix`.
+Modelo de domínio em Java (pacote `br.edu.unoesc.nextdrive.model`), consistente com o banco de dados (RNF09).
 
 ![Diagrama de classes](uml/diagrama-de-classe.jpeg)
-*Figura — Diagrama de classes do pacote `model`. Getters, setters, construtores e enumerações foram omitidos para legibilidade.*
+
+*Figura — Diagrama de classes do pacote `model`. Getters, setters, construtores e `toString()` foram omitidos para legibilidade.*
+
+#### Associações
+
+| Classe | Multiplicidade | Classe | Multiplicidade | Significado |
+|---|:---:|---|:---:|---|
+| `Veiculo` | * | `Categoria` | 1 | Todo carro pertence a uma categoria, que define a diária |
+| `Reserva` | * | `Cliente` | 1 | Um cliente pode ter várias reservas |
+| `Reserva` | * | `Categoria` | 1 | A reserva é feita por categoria |
+| `Locacao` | 0..1 | `Reserva` | 1 | Cada reserva gera no máximo uma locação |
+| `Locacao` | * | `Veiculo` | 1 | O carro é escolhido na retirada |
+| `Pagamento` | * | `Locacao` | 1 | Uma locação pode ser paga em várias partes |
+
+No código, `Veiculo`, `Reserva` e `Locacao` guardam o objeto associado (por exemplo, `Reserva.cliente`); `Pagamento` guarda só o código da locação (`locacaoId`).
 
 #### Conceitos de POO aplicados
 
 | Conceito | Onde aparece |
 |---|---|
-| **Encapsulamento** | Todos os atributos são `private`, acessados por getters e setters. Regras como `Reserva.cancelar` e `Locacao.saldoDevedor` ficam dentro das classes. |
-| **Herança** | `Pessoa` → `Cliente` → `ClientePessoaFisica`/`ClientePessoaJuridica`; `Pessoa` → `Funcionario`; `Pagamento` → `PagamentoCartao`/`PagamentoPix`. |
-| **Polimorfismo** | `Cliente.getDocumento()` devolve CPF ou CNPJ conforme a subclasse; `Cliente.getCondutor()` devolve a própria pessoa física ou o condutor responsável da empresa; `Pagamento.descrever()` e `getForma()` mudam em cada tipo de pagamento. |
-| **Classe abstrata** | `Pessoa`, `Cliente` e `Pagamento` não são instanciadas diretamente. |
-| **Enumerações** | `Cargo`, `StatusVeiculo`, `StatusReserva`, `StatusLocacao`, `FormaPagamento` (além de `Canal`, `TipoManutencao` etc.). |
+| **Encapsulamento** | Todos os atributos são privados (`-`) e acessados por getters e setters. As regras ficam dentro das próprias classes: `Cliente.cnhValidaEm()`, `Veiculo.estaDisponivel()`, `Reserva.cancelar()`, `Reserva.estimativa()`, `Locacao.calcularValorFinal()`, `Locacao.encerrar()` e `Locacao.saldoDevedor()`. |
+| **Herança** | `Pagamento` → `PagamentoCartao` / `PagamentoPix`. |
+| **Polimorfismo** | `getTipo()` e `descrever()` são abstratos em `Pagamento`, e cada subclasse implementa do seu jeito: o cartão devolve `CARTAO` e descreve a bandeira; o Pix devolve `PIX` e descreve o txid. O `toString()` também é sobrescrito nas classes. |
+| **Classe abstrata** | `Pagamento` não pode ser instanciada diretamente; os métodos abstratos aparecem em itálico no diagrama. |
+| **Enumerações** | `StatusVeiculo`, `StatusReserva` e `StatusLocacao`, com os mesmos valores dos `CHECK` do banco. |
+| **Constante** | `Locacao.MULTA_ATRASO` (30% da diária por dia de atraso), sublinhada no diagrama por ser `static`. |
 
 #### Correspondência com o banco de dados
 
 | Classe | Tabela |
 |---|---|
-| `Pessoa` + `Funcionario` | `pessoa` + `funcionario` |
-| `Cliente` + `ClientePessoaFisica` / `ClientePessoaJuridica` | `pessoa` + `cliente` + `cliente_pf` / `cliente_pj` |
-| `Pagamento` + `PagamentoCartao` / `PagamentoPix` | `pagamento` + `pagamento_cartao` / `pagamento_pix` |
-| `Loja`, `CategoriaVeiculo`, `Veiculo`, `Reserva`, `Locacao`, `Multa`, `Manutencao` | `loja`, `categoria_veiculo`, `veiculo`, `reserva`, `locacao`, `multa`, `manutencao` |
+| `Categoria`, `Cliente`, `Veiculo`, `Reserva`, `Locacao` | `categoria`, `cliente`, `veiculo`, `reserva`, `locacao` |
+| `Pagamento` + `PagamentoCartao` / `PagamentoPix` | `pagamento` (a coluna `tipo` indica a subclasse) |
+| — | `auditoria_pagamento`, preenchida só pelo trigger, sem classe Java |
 
-Os métodos abstratos (`getPerfil`, `getDocumento`, `getCondutor`, `getForma`, `descrever`) são implementados nas
-subclasses indicadas no diagrama. As classes de acesso a dados (DAO) e de serviço aparecem no diagrama de sequência.
+O diagrama mostra o pacote `model`. Os pacotes `dao` (acesso ao banco com JDBC) e `controller` (rotas da aplicação Spring Boot) usam essas classes.
 
 
 ### 6.3 Sequência (RF21)
