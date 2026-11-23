@@ -220,49 +220,34 @@ O dicionário completo, tabela por tabela, com cada campo, tipo e regra, está e
 
 ## 5 Scripts do banco de dados
 
-Os scripts ficam em [`sql/`](../sql/) e devem ser executados na ordem abaixo (veja [`sql/README.md`](../sql/README.md)).
+Os scripts ficam em [`sql/`](../sql/) e devem ser executados na ordem abaixo, conectado ao banco `nextdrive`. Para ver o código de cada um, clique no nome do script.
 
-| Ordem | Script | Conteúdo |
+| Ordem | Script | O que faz |
 |---|---|---|
-| 1 | `01_create_database.sql` | Criação do banco de dados |
-| 2 | `02_create_tables.sql` | Tabelas, chaves, *constraints* de domínio |
-| 3 | `03_indices.sql` | Índices (RF01) |
-| 4 | `04_views.sql` | Views e função de disponibilidade |
-| 5 | `05_dados_exemplo.sql` | Dados de teste |
-| 6 | `06_consultas_relatorios.sql` | SELECTs dos relatórios R01 a R13 |
-| 7 | `07_roles_privilegios.sql` | Perfis e privilégios |
-| 8 | `08_gatilhos.sql` | 8 *triggers* |
-| 9 | `09_procedimentos.sql` | 4 *procedures* e função de login |
-| 10 | `10_backup_restauração.sh` | Backup e restauração |
-| 11 | `11_testes_regras.sql` | 34 verificações automáticas das regras |
+| 1 | [`01_create_database.sql`](../sql/01_create_database.sql) | Cria o banco `nextdrive` (opcional; pode ser criado pelo DBeaver) |
+| 2 | [`02_create_tables.sql`](../sql/02_create_tables.sql) | 6 tabelas, chaves e restrições |
+| 3 | [`03_indices.sql`](../sql/03_indices.sql) | 5 índices |
+| 4 | [`04_views.sql`](../sql/04_views.sql) | 3 views |
+| 5 | [`05_dados_exemplo.sql`](../sql/05_dados_exemplo.sql) | Dados de exemplo |
+| 6 | [`06_consultas_relatorios.sql`](../sql/06_consultas_relatorios.sql) | 7 relatórios (somente consulta) |
+| 7 | [`07_gatilhos.sql`](../sql/07_gatilhos.sql) | Tabela de auditoria e 4 triggers |
+| 8 | [`08_procedimentos.sql`](../sql/08_procedimentos.sql) | 1 função e 2 procedures |
+| 9 | [`09_roles_privilegios.sql`](../sql/09_roles_privilegios.sql) | Grupos, usuários e privilégios |
+| 10 | [`10_backup_restore.sh`](../sql/10_backup_restore.sh) | Backup e restauração (script de terminal) |
+| 11 | [`11_testes_regras.sql`](../sql/11_testes_regras.sql) | 13 testes das regras; desfaz tudo no final |
 
 ### 5.1 Criação da base
+
+O `01` só cria o banco. O `02` apaga as tabelas, se já existirem, e cria as seis tabelas do modelo com chaves primárias, chaves estrangeiras, `UNIQUE` e `CHECK` (detalhes na seção 4).
 
 <details>
 <summary>01_create_database.sql</summary>
 
 ```sql
--- =====================================================================
--- Next Drive - Sistema de Aluguel de Veículos
--- 01_create_database.sql : criação do banco de dados
--- Executar conectado ao banco "postgres" com um usuário administrador:
---   psql -U postgres -f sql/01_create_database.sql
--- =====================================================================
+-- Next Drive - criação do banco (opcional).
+-- Rode este script conectado ao banco "postgres". Se você já criou o banco "nextdrive" pelo DBeaver, pule este passo.
 
--- Encerra conexões abertas para permitir recriar o banco do zero (RNF06)
-SELECT pg_terminate_backend(pid)
-  FROM pg_stat_activity
- WHERE datname = 'next_drive'
-   AND pid <> pg_backend_pid();
-
-DROP DATABASE IF EXISTS next_drive;
-
-CREATE DATABASE next_drive
-    ENCODING 'UTF8'
-    TEMPLATE template0;
-
-COMMENT ON DATABASE next_drive IS
-    'Next Drive - sistema de gerenciamento de locadora de veículos (Unoesc 2026/02)';
+CREATE DATABASE nextdrive;
 ```
 
 </details>
@@ -271,753 +256,652 @@ COMMENT ON DATABASE next_drive IS
 <summary>02_create_tables.sql — tabelas e constraints</summary>
 
 ```sql
--- =====================================================================
--- Next Drive - Sistema de Aluguel de Veículos
--- 02_create_tables.sql : criação das tabelas, chaves e restrições
--- Executar:  psql -U postgres -d next_drive -f sql/02_create_tables.sql
---
--- Modelo normalizado até a 3FN. Herança modelada como "uma tabela por
--- subclasse" (Class Table Inheritance):
---   Pessoa    -> Cliente (PF | PJ) e Funcionário
---   Pagamento -> PagamentoCartão (crédito/débito) e PagamentoPix
--- =====================================================================
+DROP TABLE IF EXISTS auditoria_pagamento, pagamento, locacao, reserva, veiculo, cliente, categoria CASCADE;
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto;   -- hash de senha (RNF05)
-
--- Recria o esquema do zero (RNF06)
-DROP TABLE IF EXISTS auditoria            CASCADE;
-DROP TABLE IF EXISTS parametro_sistema    CASCADE;
-DROP TABLE IF EXISTS manutencao           CASCADE;
-DROP TABLE IF EXISTS multa                CASCADE;
-DROP TABLE IF EXISTS pagamento_pix        CASCADE;
-DROP TABLE IF EXISTS pagamento_cartao     CASCADE;
-DROP TABLE IF EXISTS pagamento            CASCADE;
-DROP TABLE IF EXISTS locacao              CASCADE;
-DROP TABLE IF EXISTS reserva              CASCADE;
-DROP TABLE IF EXISTS veiculo              CASCADE;
-DROP TABLE IF EXISTS categoria_veiculo    CASCADE;
-DROP TABLE IF EXISTS cliente_pj           CASCADE;
-DROP TABLE IF EXISTS cliente_pf           CASCADE;
-DROP TABLE IF EXISTS cliente              CASCADE;
-DROP TABLE IF EXISTS funcionario          CASCADE;
-DROP TABLE IF EXISTS pessoa               CASCADE;
-DROP TABLE IF EXISTS loja                 CASCADE;
-
--- ---------------------------------------------------------------------
--- LOJA
--- ---------------------------------------------------------------------
-CREATE TABLE loja (
-    id        INTEGER GENERATED BY DEFAULT AS IDENTITY,
-    nome      VARCHAR(80)  NOT NULL,
-    cidade    VARCHAR(80)  NOT NULL,
-    uf        CHAR(2)      NOT NULL,
-    endereco  VARCHAR(150) NOT NULL,
-    telefone  VARCHAR(20),
-    ativa     BOOLEAN      NOT NULL DEFAULT TRUE,
-    CONSTRAINT pk_loja      PRIMARY KEY (id),
-    CONSTRAINT uq_loja_nome UNIQUE (nome),
-    CONSTRAINT ck_loja_uf   CHECK (uf ~ '^[A-Z]{2}$')
+CREATE TABLE categoria (
+    id            SERIAL PRIMARY KEY,
+    nome          VARCHAR(60)   NOT NULL UNIQUE,
+    valor_diaria  NUMERIC(10,2) NOT NULL CHECK (valor_diaria > 0)
 );
 
--- ---------------------------------------------------------------------
--- CATEGORIA DE VEÍCULO (preços e taxas: RN07, RN08)
--- ---------------------------------------------------------------------
-CREATE TABLE categoria_veiculo (
-    id                        INTEGER GENERATED BY DEFAULT AS IDENTITY,
-    nome                      VARCHAR(40)   NOT NULL,
-    descricao                 VARCHAR(200),
-    valor_diaria              NUMERIC(10,2) NOT NULL,
-    valor_hora_extra          NUMERIC(10,2) NOT NULL,
-    taxa_devolucao_outra_loja NUMERIC(10,2) NOT NULL DEFAULT 0,
-    valor_cautela             NUMERIC(10,2) NOT NULL DEFAULT 0,
-    CONSTRAINT pk_categoria_veiculo PRIMARY KEY (id),
-    CONSTRAINT uq_categoria_nome    UNIQUE (nome),
-    CONSTRAINT ck_categoria_diaria  CHECK (valor_diaria > 0),
-    CONSTRAINT ck_categoria_hora    CHECK (valor_hora_extra >= 0),
-    CONSTRAINT ck_categoria_taxa    CHECK (taxa_devolucao_outra_loja >= 0),
-    CONSTRAINT ck_categoria_cautela CHECK (valor_cautela >= 0)
-);
-
--- ---------------------------------------------------------------------
--- VEÍCULO (RN02: placa única)
--- ---------------------------------------------------------------------
-CREATE TABLE veiculo (
-    id                      INTEGER GENERATED BY DEFAULT AS IDENTITY,
-    placa                   VARCHAR(7)  NOT NULL,
-    marca                   VARCHAR(40) NOT NULL,
-    modelo                  VARCHAR(60) NOT NULL,
-    ano                     SMALLINT    NOT NULL,
-    cor                     VARCHAR(30) NOT NULL,
-    categoria_id            INTEGER     NOT NULL,
-    loja_atual_id           INTEGER     NOT NULL,
-    quilometragem           INTEGER     NOT NULL DEFAULT 0,
-    capacidade_tanque_litros SMALLINT   NOT NULL,
-    status                  VARCHAR(12) NOT NULL DEFAULT 'DISPONIVEL',
-    CONSTRAINT pk_veiculo           PRIMARY KEY (id),
-    CONSTRAINT uq_veiculo_placa     UNIQUE (placa),
-    CONSTRAINT fk_veiculo_categoria FOREIGN KEY (categoria_id)  REFERENCES categoria_veiculo (id),
-    CONSTRAINT fk_veiculo_loja      FOREIGN KEY (loja_atual_id) REFERENCES loja (id),
-    CONSTRAINT ck_veiculo_placa     CHECK (placa ~ '^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$'),
-    CONSTRAINT ck_veiculo_ano       CHECK (ano BETWEEN 1990 AND 2100),
-    CONSTRAINT ck_veiculo_km        CHECK (quilometragem >= 0),
-    CONSTRAINT ck_veiculo_tanque    CHECK (capacidade_tanque_litros > 0),
-    CONSTRAINT ck_veiculo_status    CHECK (status IN ('DISPONIVEL','LOCADO','MANUTENCAO','INATIVO'))
-);
-
--- ---------------------------------------------------------------------
--- PESSOA (superclasse) e subclasses
--- ---------------------------------------------------------------------
-CREATE TABLE pessoa (
-    id            INTEGER GENERATED BY DEFAULT AS IDENTITY,
-    nome          VARCHAR(120) NOT NULL,
-    email         VARCHAR(120) NOT NULL,
-    senha_hash    TEXT         NOT NULL,          -- bcrypt via pgcrypto (RNF05)
-    telefone      VARCHAR(20),
-    data_cadastro TIMESTAMP    NOT NULL DEFAULT now(),
-    CONSTRAINT pk_pessoa       PRIMARY KEY (id),
-    CONSTRAINT uq_pessoa_email UNIQUE (email),
-    CONSTRAINT ck_pessoa_email CHECK (email ~ '^[^@\s]+@[^@\s]+\.[^@\s]+$')
-);
-
-CREATE TABLE funcionario (
-    pessoa_id      INTEGER     NOT NULL,
-    cpf            CHAR(11)    NOT NULL,
-    cargo          VARCHAR(10) NOT NULL,
-    loja_id        INTEGER     NOT NULL,
-    data_admissao  DATE        NOT NULL DEFAULT CURRENT_DATE,
-    ativo          BOOLEAN     NOT NULL DEFAULT TRUE,
-    CONSTRAINT pk_funcionario        PRIMARY KEY (pessoa_id),
-    CONSTRAINT uq_funcionario_cpf    UNIQUE (cpf),
-    CONSTRAINT fk_funcionario_pessoa FOREIGN KEY (pessoa_id) REFERENCES pessoa (id),
-    CONSTRAINT fk_funcionario_loja   FOREIGN KEY (loja_id)   REFERENCES loja (id),
-    CONSTRAINT ck_funcionario_cpf    CHECK (cpf ~ '^[0-9]{11}$'),
-    CONSTRAINT ck_funcionario_cargo  CHECK (cargo IN ('ATENDENTE','GERENTE'))
-);
-
--- Cliente: generalização de pessoa física (PF) e jurídica (PJ)
 CREATE TABLE cliente (
-    pessoa_id    INTEGER NOT NULL,
-    tipo_cliente CHAR(2) NOT NULL,
-    CONSTRAINT pk_cliente        PRIMARY KEY (pessoa_id),
-    CONSTRAINT fk_cliente_pessoa FOREIGN KEY (pessoa_id) REFERENCES pessoa (id),
-    CONSTRAINT ck_cliente_tipo   CHECK (tipo_cliente IN ('PF','PJ')),
-    -- necessário para a chave estrangeira composta das subclasses
-    CONSTRAINT uq_cliente_pessoa_tipo UNIQUE (pessoa_id, tipo_cliente)
+    id            SERIAL PRIMARY KEY,
+    nome          VARCHAR(120) NOT NULL,
+    cpf           VARCHAR(11)  NOT NULL UNIQUE,
+    email         VARCHAR(120) NOT NULL UNIQUE,
+    telefone      VARCHAR(20),
+    cnh_numero    VARCHAR(11)  NOT NULL,
+    cnh_validade  DATE         NOT NULL
 );
 
-CREATE TABLE cliente_pf (
-    pessoa_id        INTEGER     NOT NULL,
-    tipo_cliente     CHAR(2)     NOT NULL DEFAULT 'PF',
-    cpf              CHAR(11)    NOT NULL,        -- RN01
-    data_nascimento  DATE        NOT NULL,
-    cnh_numero       VARCHAR(11) NOT NULL,
-    cnh_data_emissao DATE        NOT NULL,
-    cnh_validade     DATE        NOT NULL,
-    CONSTRAINT pk_cliente_pf         PRIMARY KEY (pessoa_id),
-    CONSTRAINT uq_cliente_pf_cpf     UNIQUE (cpf),
-    CONSTRAINT uq_cliente_pf_cnh     UNIQUE (cnh_numero),
-    -- garante que só exista linha PF para cliente do tipo 'PF'
-    CONSTRAINT fk_cliente_pf_cliente FOREIGN KEY (pessoa_id, tipo_cliente)
-                                     REFERENCES cliente (pessoa_id, tipo_cliente),
-    CONSTRAINT ck_cliente_pf_tipo    CHECK (tipo_cliente = 'PF'),
-    CONSTRAINT ck_cliente_pf_cpf     CHECK (cpf ~ '^[0-9]{11}$'),
-    CONSTRAINT ck_cliente_pf_cnh     CHECK (cnh_numero ~ '^[0-9]{11}$'),
-    CONSTRAINT ck_cliente_pf_datas   CHECK (cnh_data_emissao > data_nascimento
-                                        AND cnh_validade > cnh_data_emissao)
+CREATE TABLE veiculo (
+    id             SERIAL PRIMARY KEY,
+    placa          VARCHAR(8)  NOT NULL UNIQUE,
+    modelo         VARCHAR(60) NOT NULL,
+    ano            INTEGER     NOT NULL CHECK (ano BETWEEN 1990 AND 2100),
+    quilometragem  INTEGER     NOT NULL DEFAULT 0 CHECK (quilometragem >= 0),
+    status         VARCHAR(12) NOT NULL DEFAULT 'DISPONIVEL'
+                   CHECK (status IN ('DISPONIVEL', 'LOCADO', 'MANUTENCAO')),
+    categoria_id   INTEGER     NOT NULL REFERENCES categoria (id)
 );
 
-CREATE TABLE cliente_pj (
-    pessoa_id     INTEGER      NOT NULL,
-    tipo_cliente  CHAR(2)      NOT NULL DEFAULT 'PJ',
-    cnpj          CHAR(14)     NOT NULL,          -- RN01
-    razao_social  VARCHAR(150) NOT NULL,
-    condutor_id   INTEGER      NOT NULL,          -- condutor responsável (RF04)
-    CONSTRAINT pk_cliente_pj          PRIMARY KEY (pessoa_id),
-    CONSTRAINT uq_cliente_pj_cnpj     UNIQUE (cnpj),
-    CONSTRAINT fk_cliente_pj_cliente  FOREIGN KEY (pessoa_id, tipo_cliente)
-                                      REFERENCES cliente (pessoa_id, tipo_cliente),
-    CONSTRAINT fk_cliente_pj_condutor FOREIGN KEY (condutor_id) REFERENCES cliente_pf (pessoa_id),
-    CONSTRAINT ck_cliente_pj_tipo     CHECK (tipo_cliente = 'PJ'),
-    CONSTRAINT ck_cliente_pj_cnpj     CHECK (cnpj ~ '^[0-9]{14}$')
-);
-
--- ---------------------------------------------------------------------
--- RESERVA
--- ---------------------------------------------------------------------
 CREATE TABLE reserva (
-    id                       INTEGER GENERATED BY DEFAULT AS IDENTITY,
-    cliente_id               INTEGER      NOT NULL,
-    categoria_id             INTEGER      NOT NULL,
-    loja_retirada_id         INTEGER      NOT NULL,
-    loja_devolucao_id        INTEGER      NOT NULL,
-    data_retirada_prevista   TIMESTAMP    NOT NULL,
-    data_devolucao_prevista  TIMESTAMP    NOT NULL,
-    valor_estimado           NUMERIC(10,2) NOT NULL,
-    canal                    VARCHAR(6)   NOT NULL,
-    funcionario_id           INTEGER,
-    status                   VARCHAR(10)  NOT NULL DEFAULT 'ATIVA',
-    data_criacao             TIMESTAMP    NOT NULL DEFAULT now(),
-    data_cancelamento        TIMESTAMP,
-    justificativa_cancelamento TEXT,
-    CONSTRAINT pk_reserva              PRIMARY KEY (id),
-    CONSTRAINT fk_reserva_cliente      FOREIGN KEY (cliente_id)        REFERENCES cliente (pessoa_id),
-    CONSTRAINT fk_reserva_categoria    FOREIGN KEY (categoria_id)      REFERENCES categoria_veiculo (id),
-    CONSTRAINT fk_reserva_loja_ret     FOREIGN KEY (loja_retirada_id)  REFERENCES loja (id),
-    CONSTRAINT fk_reserva_loja_dev     FOREIGN KEY (loja_devolucao_id) REFERENCES loja (id),
-    CONSTRAINT fk_reserva_funcionario  FOREIGN KEY (funcionario_id)    REFERENCES funcionario (pessoa_id),
-    CONSTRAINT ck_reserva_periodo      CHECK (data_devolucao_prevista > data_retirada_prevista),   -- RN06
-    CONSTRAINT ck_reserva_valor        CHECK (valor_estimado >= 0),
-    CONSTRAINT ck_reserva_canal        CHECK (canal IN ('SITE','BALCAO')),
-    CONSTRAINT ck_reserva_canal_func   CHECK ((canal = 'BALCAO') = (funcionario_id IS NOT NULL)),
-    CONSTRAINT ck_reserva_status       CHECK (status IN ('ATIVA','CANCELADA','EFETIVADA')),
-    CONSTRAINT ck_reserva_cancelamento CHECK (status <> 'CANCELADA'
-                                          OR (justificativa_cancelamento IS NOT NULL
-                                              AND btrim(justificativa_cancelamento) <> ''
-                                              AND data_cancelamento IS NOT NULL))
+    id                       SERIAL PRIMARY KEY,
+    cliente_id               INTEGER     NOT NULL REFERENCES cliente (id),
+    categoria_id             INTEGER     NOT NULL REFERENCES categoria (id),
+    data_retirada_prevista   DATE        NOT NULL,
+    data_devolucao_prevista  DATE        NOT NULL,
+    status                   VARCHAR(10) NOT NULL DEFAULT 'ATIVA'
+                             CHECK (status IN ('ATIVA', 'CANCELADA', 'EFETIVADA')),
+    justificativa_cancelamento  VARCHAR(200),
+    CONSTRAINT ck_reserva_datas CHECK (data_devolucao_prevista > data_retirada_prevista)
 );
 
--- ---------------------------------------------------------------------
--- LOCAÇÃO (retirada + devolução)
--- O cliente é obtido pela reserva (evita redundância - 3FN). Os valores
--- calculados na devolução ficam gravados como "foto" do contrato (RN09).
--- ---------------------------------------------------------------------
 CREATE TABLE locacao (
-    id                         INTEGER GENERATED BY DEFAULT AS IDENTITY,
-    reserva_id                 INTEGER       NOT NULL,
-    veiculo_id                 INTEGER       NOT NULL,
-    condutor_id                INTEGER       NOT NULL,
-    funcionario_retirada_id    INTEGER       NOT NULL,
-    funcionario_devolucao_id   INTEGER,
-    loja_retirada_id           INTEGER       NOT NULL,
-    loja_devolucao_id          INTEGER,
-    data_retirada              TIMESTAMP     NOT NULL,
-    data_devolucao_prevista    TIMESTAMP     NOT NULL,
-    data_devolucao_real        TIMESTAMP,
-    km_saida                   INTEGER       NOT NULL,
-    km_chegada                 INTEGER,
-    combustivel_saida          SMALLINT      NOT NULL,        -- % do tanque
-    combustivel_chegada        SMALLINT,
-    cautela_valor              NUMERIC(10,2) NOT NULL DEFAULT 0,
-    cautela_status             VARCHAR(9)    NOT NULL DEFAULT 'RETIDA',
-    valor_diaria_contratada    NUMERIC(10,2) NOT NULL,
-    valor_diarias              NUMERIC(10,2),
-    valor_horas_extras         NUMERIC(10,2),
-    valor_combustivel          NUMERIC(10,2),
-    taxa_devolucao_outra_loja  NUMERIC(10,2),
-    desconto                   NUMERIC(10,2),
-    valor_final                NUMERIC(10,2),
-    status                     VARCHAR(9)    NOT NULL DEFAULT 'ABERTA',
-    CONSTRAINT pk_locacao             PRIMARY KEY (id),
-    CONSTRAINT uq_locacao_reserva     UNIQUE (reserva_id),
-    CONSTRAINT fk_locacao_reserva     FOREIGN KEY (reserva_id)               REFERENCES reserva (id),
-    CONSTRAINT fk_locacao_veiculo     FOREIGN KEY (veiculo_id)               REFERENCES veiculo (id),
-    CONSTRAINT fk_locacao_condutor    FOREIGN KEY (condutor_id)              REFERENCES cliente_pf (pessoa_id),
-    CONSTRAINT fk_locacao_func_ret    FOREIGN KEY (funcionario_retirada_id)  REFERENCES funcionario (pessoa_id),
-    CONSTRAINT fk_locacao_func_dev    FOREIGN KEY (funcionario_devolucao_id) REFERENCES funcionario (pessoa_id),
-    CONSTRAINT fk_locacao_loja_ret    FOREIGN KEY (loja_retirada_id)         REFERENCES loja (id),
-    CONSTRAINT fk_locacao_loja_dev    FOREIGN KEY (loja_devolucao_id)        REFERENCES loja (id),
-    CONSTRAINT ck_locacao_prevista    CHECK (data_devolucao_prevista > data_retirada),
-    CONSTRAINT ck_locacao_real        CHECK (data_devolucao_real IS NULL OR data_devolucao_real > data_retirada), -- RN06
-    CONSTRAINT ck_locacao_km          CHECK (km_saida >= 0 AND (km_chegada IS NULL OR km_chegada >= km_saida)),
-    CONSTRAINT ck_locacao_comb        CHECK (combustivel_saida BETWEEN 0 AND 100
-                                         AND (combustivel_chegada IS NULL OR combustivel_chegada BETWEEN 0 AND 100)),
-    CONSTRAINT ck_locacao_cautela     CHECK (cautela_valor >= 0 AND cautela_status IN ('RETIDA','LIBERADA')),
-    CONSTRAINT ck_locacao_valores     CHECK (valor_diaria_contratada > 0
-                                         AND COALESCE(valor_diarias, 0)             >= 0
-                                         AND COALESCE(valor_horas_extras, 0)        >= 0
-                                         AND COALESCE(valor_combustivel, 0)         >= 0
-                                         AND COALESCE(taxa_devolucao_outra_loja, 0) >= 0
-                                         AND COALESCE(desconto, 0)                  >= 0),
-    CONSTRAINT ck_locacao_total       CHECK (valor_final IS NULL
-                                          OR valor_final = valor_diarias + valor_horas_extras + valor_combustivel
-                                                         + taxa_devolucao_outra_loja - desconto),
-    CONSTRAINT ck_locacao_status      CHECK (status IN ('ABERTA','ENCERRADA','PAGA')),
-    CONSTRAINT ck_locacao_encerrada   CHECK (status = 'ABERTA'
-                                          OR (data_devolucao_real IS NOT NULL AND km_chegada IS NOT NULL
-                                              AND combustivel_chegada IS NOT NULL AND loja_devolucao_id IS NOT NULL
-                                              AND funcionario_devolucao_id IS NOT NULL AND valor_final IS NOT NULL))
+    id                   SERIAL PRIMARY KEY,
+    reserva_id           INTEGER     NOT NULL UNIQUE REFERENCES reserva (id),
+    veiculo_id           INTEGER     NOT NULL REFERENCES veiculo (id),
+    data_retirada        DATE        NOT NULL,
+    data_devolucao_real  DATE,
+    km_saida             INTEGER     NOT NULL,
+    km_chegada           INTEGER,
+    valor_final          NUMERIC(10,2),
+    status               VARCHAR(10) NOT NULL DEFAULT 'ABERTA'
+                         CHECK (status IN ('ABERTA', 'ENCERRADA', 'PAGA'))
 );
 
--- ---------------------------------------------------------------------
--- PAGAMENTO (superclasse) e subclasses (RN12)
--- ---------------------------------------------------------------------
 CREATE TABLE pagamento (
-    id              INTEGER GENERATED BY DEFAULT AS IDENTITY,
-    locacao_id      INTEGER       NOT NULL,
-    valor           NUMERIC(10,2) NOT NULL,
-    forma           VARCHAR(14)   NOT NULL,
+    id              SERIAL PRIMARY KEY,
+    locacao_id      INTEGER       NOT NULL REFERENCES locacao (id),
+    tipo            VARCHAR(6)    NOT NULL CHECK (tipo IN ('CARTAO', 'PIX')),
+    valor           NUMERIC(10,2) NOT NULL CHECK (valor > 0),
     data_pagamento  TIMESTAMP     NOT NULL DEFAULT now(),
-    funcionario_id  INTEGER       NOT NULL,
-    CONSTRAINT pk_pagamento             PRIMARY KEY (id),
-    CONSTRAINT fk_pagamento_locacao     FOREIGN KEY (locacao_id)     REFERENCES locacao (id),
-    CONSTRAINT fk_pagamento_funcionario FOREIGN KEY (funcionario_id) REFERENCES funcionario (pessoa_id),
-    CONSTRAINT ck_pagamento_valor       CHECK (valor > 0),
-    CONSTRAINT ck_pagamento_forma       CHECK (forma IN ('CARTAO_CREDITO','CARTAO_DEBITO','PIX')),
-    CONSTRAINT uq_pagamento_id_forma    UNIQUE (id, forma)
+    bandeira        VARCHAR(20),   -- só para cartão
+    txid            VARCHAR(35),   -- só para Pix
+    CONSTRAINT ck_pagamento_tipo CHECK (
+        (tipo = 'CARTAO' AND bandeira IS NOT NULL) OR (tipo = 'PIX' AND txid IS NOT NULL))
 );
-
-CREATE TABLE pagamento_cartao (
-    pagamento_id  INTEGER     NOT NULL,
-    forma         VARCHAR(14) NOT NULL,
-    bandeira      VARCHAR(20) NOT NULL,
-    final_cartao  CHAR(4)     NOT NULL,
-    parcelas      SMALLINT    NOT NULL DEFAULT 1,
-    CONSTRAINT pk_pagamento_cartao      PRIMARY KEY (pagamento_id),
-    CONSTRAINT fk_pagamento_cartao_pag  FOREIGN KEY (pagamento_id, forma)
-                                        REFERENCES pagamento (id, forma),
-    CONSTRAINT ck_pag_cartao_forma      CHECK (forma IN ('CARTAO_CREDITO','CARTAO_DEBITO')),
-    CONSTRAINT ck_pag_cartao_final      CHECK (final_cartao ~ '^[0-9]{4}$'),
-    CONSTRAINT ck_pag_cartao_parcelas   CHECK (parcelas BETWEEN 1 AND 12
-                                           AND (forma = 'CARTAO_CREDITO' OR parcelas = 1))
-);
-
-CREATE TABLE pagamento_pix (
-    pagamento_id  INTEGER     NOT NULL,
-    forma         VARCHAR(14) NOT NULL DEFAULT 'PIX',
-    txid          VARCHAR(35) NOT NULL,
-    chave_pix     VARCHAR(100),
-    CONSTRAINT pk_pagamento_pix      PRIMARY KEY (pagamento_id),
-    CONSTRAINT uq_pagamento_pix_txid UNIQUE (txid),
-    CONSTRAINT fk_pagamento_pix_pag  FOREIGN KEY (pagamento_id, forma)
-                                     REFERENCES pagamento (id, forma),
-    CONSTRAINT ck_pag_pix_forma      CHECK (forma = 'PIX')
-);
-
--- ---------------------------------------------------------------------
--- MULTA DE TRÂNSITO (RF24) e MANUTENÇÃO (RF12)
--- ---------------------------------------------------------------------
-CREATE TABLE multa (
-    id              INTEGER GENERATED BY DEFAULT AS IDENTITY,
-    locacao_id      INTEGER       NOT NULL,
-    descricao       VARCHAR(200)  NOT NULL,
-    valor           NUMERIC(10,2) NOT NULL,
-    data_infracao   TIMESTAMP     NOT NULL,
-    data_registro   TIMESTAMP     NOT NULL DEFAULT now(),
-    funcionario_id  INTEGER       NOT NULL,
-    status          VARCHAR(8)    NOT NULL DEFAULT 'PENDENTE',
-    CONSTRAINT pk_multa             PRIMARY KEY (id),
-    CONSTRAINT fk_multa_locacao     FOREIGN KEY (locacao_id)     REFERENCES locacao (id),
-    CONSTRAINT fk_multa_funcionario FOREIGN KEY (funcionario_id) REFERENCES funcionario (pessoa_id),
-    CONSTRAINT ck_multa_valor       CHECK (valor > 0),
-    CONSTRAINT ck_multa_status      CHECK (status IN ('PENDENTE','PAGA')),
-    CONSTRAINT ck_multa_datas       CHECK (data_registro >= data_infracao)
-);
-
-CREATE TABLE manutencao (
-    id              INTEGER GENERATED BY DEFAULT AS IDENTITY,
-    veiculo_id      INTEGER       NOT NULL,
-    funcionario_id  INTEGER       NOT NULL,
-    tipo            VARCHAR(10)   NOT NULL,
-    descricao       VARCHAR(200)  NOT NULL,
-    data_entrada    DATE          NOT NULL,
-    data_saida      DATE,
-    custo           NUMERIC(10,2),
-    status          VARCHAR(12)   NOT NULL DEFAULT 'EM_ANDAMENTO',
-    CONSTRAINT pk_manutencao             PRIMARY KEY (id),
-    CONSTRAINT fk_manutencao_veiculo     FOREIGN KEY (veiculo_id)     REFERENCES veiculo (id),
-    CONSTRAINT fk_manutencao_funcionario FOREIGN KEY (funcionario_id) REFERENCES funcionario (pessoa_id),
-    CONSTRAINT ck_manutencao_tipo        CHECK (tipo IN ('PREVENTIVA','CORRETIVA')),
-    CONSTRAINT ck_manutencao_status      CHECK (status IN ('EM_ANDAMENTO','CONCLUIDA')),
-    CONSTRAINT ck_manutencao_datas       CHECK (data_saida IS NULL OR data_saida >= data_entrada),
-    CONSTRAINT ck_manutencao_custo       CHECK (custo IS NULL OR custo >= 0),
-    CONSTRAINT ck_manutencao_conclusao   CHECK ((status = 'CONCLUIDA') = (data_saida IS NOT NULL AND custo IS NOT NULL))
-);
-
--- ---------------------------------------------------------------------
--- AUDITORIA (RF17) e PARÂMETROS DO SISTEMA
--- ---------------------------------------------------------------------
-CREATE TABLE auditoria (
-    id              BIGINT GENERATED ALWAYS AS IDENTITY,
-    tabela          VARCHAR(40) NOT NULL,
-    operacao        CHAR(1)     NOT NULL,
-    registro_id     INTEGER     NOT NULL,
-    dados_antigos   JSONB,
-    dados_novos     JSONB,
-    usuario_db      NAME        NOT NULL DEFAULT session_user,
-    data_hora       TIMESTAMP   NOT NULL DEFAULT now(),
-    CONSTRAINT pk_auditoria       PRIMARY KEY (id),
-    CONSTRAINT ck_auditoria_oper  CHECK (operacao IN ('I','U','D'))
-);
-
-CREATE TABLE parametro_sistema (
-    chave      VARCHAR(40)   NOT NULL,
-    valor      NUMERIC(12,2) NOT NULL,
-    descricao  VARCHAR(150)  NOT NULL,
-    CONSTRAINT pk_parametro_sistema PRIMARY KEY (chave)
-);
-
--- ---------------------------------------------------------------------
--- Comentários (alimentam o dicionário de dados)
--- ---------------------------------------------------------------------
-COMMENT ON TABLE loja              IS 'Lojas (pontos de retirada e devolução)';
-COMMENT ON TABLE categoria_veiculo IS 'Categorias de veículos com preços e taxas';
-COMMENT ON TABLE veiculo           IS 'Frota de veículos';
-COMMENT ON TABLE pessoa            IS 'Superclasse de clientes e funcionários (login por e-mail e senha)';
-COMMENT ON TABLE funcionario       IS 'Funcionários: atendentes e gerentes';
-COMMENT ON TABLE cliente           IS 'Generalização de clientes PF e PJ';
-COMMENT ON TABLE cliente_pf        IS 'Cliente pessoa física (CPF e CNH)';
-COMMENT ON TABLE cliente_pj        IS 'Cliente pessoa jurídica (CNPJ e condutor responsável)';
-COMMENT ON TABLE reserva           IS 'Reservas de veículos por categoria';
-COMMENT ON TABLE locacao           IS 'Locações: retirada, devolução e valores calculados';
-COMMENT ON TABLE pagamento         IS 'Pagamentos de locações (superclasse)';
-COMMENT ON TABLE pagamento_cartao  IS 'Detalhes de pagamentos em cartão de crédito ou débito';
-COMMENT ON TABLE pagamento_pix     IS 'Detalhes de pagamentos via PIX';
-COMMENT ON TABLE multa             IS 'Multas de trânsito vinculadas a uma locação';
-COMMENT ON TABLE manutencao        IS 'Manutenções de veículos';
-COMMENT ON TABLE auditoria         IS 'Trilha de auditoria de pagamentos e preços (preenchida por triggers)';
-COMMENT ON TABLE parametro_sistema IS 'Parâmetros usados nos cálculos de devolução';
-
-COMMENT ON COLUMN locacao.combustivel_saida        IS 'Nível de combustível na retirada, em % do tanque';
-COMMENT ON COLUMN locacao.valor_diaria_contratada  IS 'Valor da diária da categoria no momento da retirada';
-COMMENT ON COLUMN locacao.cautela_valor            IS 'Valor retido no cartão de crédito (cautela)';
-COMMENT ON COLUMN pessoa.senha_hash                IS 'Hash bcrypt da senha (nunca texto puro)';
 ```
 
 </details>
 
-
 ### 5.2 Índices
 
-Além dos índices únicos criados pelas restrições (placa, CPF, CNPJ, e-mail), foram criados índices para o período de reservas, chaves estrangeiras usadas em junções e índices parciais para os filtros mais frequentes (por exemplo, apenas reservas ativas).
+A placa, o CPF, o e-mail, o nome da categoria e a reserva da locação já ganham índice automaticamente por serem `UNIQUE`. O script cria mais cinco índices para as buscas mais comuns do sistema: cliente por nome, carros por situação, reservas por período, locação aberta de um carro e pagamentos de uma locação.
 
 <details>
 <summary>03_indices.sql</summary>
 
 ```sql
--- =====================================================================
--- Next Drive - 03_indices.sql : índices (RF01)
--- Executar:  psql -U postgres -d next_drive -f sql/03_indices.sql
---
--- Já existem índices únicos criados automaticamente pelas constraints
--- UNIQUE do script 02 e cobrem as colunas mais consultadas do RF01:
---   uq_veiculo_placa     -> placa do veículo       (RN02)
---   uq_cliente_pf_cpf    -> CPF do cliente PF       (RN01)
---   uq_cliente_pj_cnpj   -> CNPJ do cliente PJ      (RN01)
---   uq_pessoa_email      -> e-mail (login, RF02)
--- Abaixo ficam os índices adicionais: dados das reservas, chaves
--- estrangeiras usadas em junções e índices parciais para os filtros
--- mais frequentes.
--- =====================================================================
+-- Next Drive - índices.
+-- A placa do veículo e o CPF do cliente já têm índice criado automaticamente pela restrição UNIQUE.
+-- Aqui ficam os índices extras, para as buscas mais comuns do sistema.
 
--- Reservas: busca por período e loja de retirada (consulta de disponibilidade)
-CREATE INDEX idx_reserva_loja_periodo
-    ON reserva (loja_retirada_id, data_retirada_prevista, data_devolucao_prevista);
-
-CREATE INDEX idx_reserva_cliente    ON reserva (cliente_id);
-CREATE INDEX idx_reserva_categoria  ON reserva (categoria_id);
-
--- Só reservas ativas participam da disponibilidade
-CREATE INDEX idx_reserva_ativas
-    ON reserva (categoria_id, loja_retirada_id, data_retirada_prevista)
- WHERE status = 'ATIVA';
-
--- Veículos: filtro por loja, categoria e situação
-CREATE INDEX idx_veiculo_disponibilidade
-    ON veiculo (loja_atual_id, categoria_id, status);
-
--- Locações: conflito de períodos por veículo e histórico por condutor
-CREATE INDEX idx_locacao_veiculo_periodo
-    ON locacao (veiculo_id, data_retirada, data_devolucao_prevista);
-
-CREATE INDEX idx_locacao_abertas
-    ON locacao (veiculo_id)
- WHERE status = 'ABERTA';
-
-CREATE INDEX idx_locacao_condutor   ON locacao (condutor_id);
-CREATE INDEX idx_locacao_devolucao  ON locacao (data_devolucao_real);
-
--- Pagamentos, multas e manutenções
-CREATE INDEX idx_pagamento_locacao  ON pagamento (locacao_id);
-CREATE INDEX idx_pagamento_data     ON pagamento (data_pagamento);
-
-CREATE INDEX idx_multa_locacao      ON multa (locacao_id);
-CREATE INDEX idx_multa_pendentes    ON multa (locacao_id) WHERE status = 'PENDENTE';
-
-CREATE INDEX idx_manutencao_veiculo ON manutencao (veiculo_id, data_entrada);
-
--- Funcionários por loja
-CREATE INDEX idx_funcionario_loja   ON funcionario (loja_id);
-
--- Auditoria: consulta por tabela e período
-CREATE INDEX idx_auditoria_tabela_data ON auditoria (tabela, data_hora);
-
--- Conferência dos índices das colunas do RF01
--- SELECT tablename, indexname FROM pg_indexes
---  WHERE schemaname = 'public' AND indexname IN
---        ('uq_veiculo_placa','uq_cliente_pf_cpf','uq_cliente_pj_cnpj','idx_reserva_loja_periodo');
+CREATE INDEX IF NOT EXISTS idx_cliente_nome         ON cliente (nome);
+CREATE INDEX IF NOT EXISTS idx_veiculo_status       ON veiculo (status);
+CREATE INDEX IF NOT EXISTS idx_reserva_datas        ON reserva (data_retirada_prevista, data_devolucao_prevista);
+CREATE INDEX IF NOT EXISTS idx_locacao_veiculo      ON locacao (veiculo_id, status);
+CREATE INDEX IF NOT EXISTS idx_pagamento_locacao    ON pagamento (locacao_id);
 ```
 
 </details>
 
-
 ### 5.3 Views
 
-As views e a função abaixo ficam em [`sql/04_views.sql`](../sql/04_views.sql). Os relatórios da seção 5.5 são consultas sobre elas.
+| View | O que mostra | Usada em |
+|---|---|---|
+| `vw_veiculos_disponiveis` | Carros com status `DISPONIVEL`, com categoria e diária | R02 |
+| `vw_locacoes_abertas` | Locações em andamento, com cliente, carro e devolução prevista | R03 |
+| `vw_faturamento_categoria` | Quantidade e total de pagamentos por categoria | R04 |
 
-| Objeto | Para que serve |
-|---|---|
-| `vw_disponibilidade_frota` | Quantos veículos há por loja e categoria: disponíveis, locados e em manutenção |
-| `fn_veiculos_disponiveis` | Lista os veículos livres de uma categoria e loja em um período |
-| `vw_reservas_detalhadas` | Reservas com cliente, categoria e lojas já juntados |
-| `vw_locacoes_detalhadas` | Locações com cliente, condutor, veículo e lojas |
-| `vw_saldo_locacao` | Valor final, total pago e saldo devedor de cada locação |
-| `vw_faturamento_mensal` | Faturamento por mês |
-| `vw_historico_cliente` | Histórico de locações de cada cliente |
-| `vw_utilizacao_frota` | Quilometragem e uso de cada veículo |
-| `vw_multas_pendentes` | Multas ainda não pagas, com cliente e locação |
+<details>
+<summary>04_views.sql</summary>
 
-A função `fn_veiculos_disponiveis` é `SECURITY DEFINER`: o atendente e o site precisam saber quais veículos estão livres, mas não têm permissão de ler a tabela `manutencao`. A função executa com o privilégio do dono e devolve apenas o resultado.
+```sql
+-- Next Drive - views (consultas salvas).
+
+CREATE OR REPLACE VIEW vw_veiculos_disponiveis AS
+SELECT v.id, v.placa, v.modelo, v.ano, c.nome AS categoria, c.valor_diaria
+FROM veiculo v
+JOIN categoria c ON c.id = v.categoria_id
+WHERE v.status = 'DISPONIVEL';
+
+CREATE OR REPLACE VIEW vw_locacoes_abertas AS
+SELECT l.id AS locacao_id, cl.nome AS cliente, v.placa, v.modelo,
+       l.data_retirada, r.data_devolucao_prevista
+FROM locacao l
+JOIN reserva r  ON r.id = l.reserva_id
+JOIN cliente cl ON cl.id = r.cliente_id
+JOIN veiculo v  ON v.id = l.veiculo_id
+WHERE l.status = 'ABERTA';
+
+CREATE OR REPLACE VIEW vw_faturamento_categoria AS
+SELECT c.nome AS categoria, COUNT(p.id) AS pagamentos, COALESCE(SUM(p.valor), 0) AS total
+FROM categoria c
+LEFT JOIN veiculo v   ON v.categoria_id = c.id
+LEFT JOIN locacao l   ON l.veiculo_id = v.id
+LEFT JOIN pagamento p ON p.locacao_id = l.id
+GROUP BY c.nome;
+```
+
+</details>
 
 ### 5.4 Dados de exemplo
 
-O script [`sql/05_dados_exemplo.sql`](../sql/05_dados_exemplo.sql) carrega 3 lojas, 4 categorias, 10 veículos, 10 pessoas (clientes, atendentes e gerente), reservas, locações, pagamentos e multas, para testar o sistema.
+O script carrega 3 categorias, 5 carros, 3 clientes, 5 reservas (efetivadas, uma ativa e uma cancelada), 3 locações (uma paga, uma devolvida com atraso e pagamento parcial e uma ainda aberta) e 2 pagamentos (cartão e Pix). Assim todos os relatórios mostram resultado.
+
+<details>
+<summary>05_dados_exemplo.sql</summary>
+
+```sql
+-- Next Drive (versão simples) - dados de exemplo
+
+INSERT INTO categoria (nome, valor_diaria) VALUES
+    ('Econômico', 120.00),
+    ('SUV',       220.00),
+    ('Luxo',      380.00);
+
+INSERT INTO veiculo (placa, modelo, ano, quilometragem, categoria_id) VALUES
+    ('ABC1D23', 'Fiat Mobi',        2023, 15200, 1),
+    ('DEF4G56', 'Chevrolet Onix',   2024,  8300, 1),
+    ('GHI7J89', 'Jeep Compass',     2023, 22100, 2),
+    ('JKL0M12', 'Toyota Corolla X', 2024,  5400, 3),
+    ('NOP3Q45', 'Renault Kwid',     2022, 41000, 1);
+
+INSERT INTO cliente (nome, cpf, email, telefone, cnh_numero, cnh_validade) VALUES
+    ('Ana Lima',        '11122233344', 'ana.lima@example.com',       '49999990001', '12345678901', '2030-05-20'),
+    ('Carlos Pereira',  '55566677788', 'carlos.pereira@example.com', '49999990002', '10987654321', '2029-11-10'),
+    ('Marcos Almeida',  '99988877766', 'marcos.almeida@example.com', '49999990003', '11223344556', '2031-02-15');
+
+-- Reservas: duas viraram locação já devolvida, uma está com o carro na rua,
+-- uma ainda vai acontecer e uma foi cancelada.
+INSERT INTO reserva (cliente_id, categoria_id, data_retirada_prevista, data_devolucao_prevista, status, justificativa_cancelamento) VALUES
+    (1, 1, '2026-11-02', '2026-11-05', 'EFETIVADA', NULL),
+    (2, 2, '2026-11-10', '2026-11-14', 'EFETIVADA', NULL),
+    (3, 3, '2026-11-20', '2026-11-25', 'EFETIVADA', NULL),
+    (1, 2, '2026-12-01', '2026-12-03', 'ATIVA',     NULL),
+    (2, 1, '2026-11-18', '2026-11-20', 'CANCELADA', 'Cliente desistiu da viagem');
+
+-- Locações:
+--   1) Ana, Fiat Mobi: 3 diárias de R$ 120,00 = R$ 360,00, já paga.
+--   2) Carlos, Jeep Compass: devolveu 2 dias depois do previsto.
+--      6 diárias de R$ 220,00 + 2 x 30% da diária = R$ 1.452,00; pagou só uma parte.
+--   3) Marcos, Toyota Corolla: ainda está com o carro.
+INSERT INTO locacao (reserva_id, veiculo_id, data_retirada, data_devolucao_real, km_saida, km_chegada, valor_final, status) VALUES
+    (1, 1, '2026-11-02', '2026-11-05', 15200, 15650,  360.00, 'PAGA'),
+    (2, 3, '2026-11-10', '2026-11-16', 22100, 23050, 1452.00, 'ENCERRADA'),
+    (3, 4, '2026-11-20', NULL,          5400,  NULL,    NULL, 'ABERTA');
+
+-- Situação atual dos carros depois dessas locações.
+UPDATE veiculo SET quilometragem = 15650 WHERE id = 1;
+UPDATE veiculo SET quilometragem = 23050 WHERE id = 3;
+UPDATE veiculo SET status = 'LOCADO'     WHERE id = 4;
+UPDATE veiculo SET status = 'MANUTENCAO' WHERE id = 5;
+
+-- Pagamentos: um com cartão (quita a locação 1) e um Pix parcial da locação 2.
+INSERT INTO pagamento (locacao_id, tipo, valor, data_pagamento, bandeira, txid) VALUES
+    (1, 'CARTAO', 360.00, '2026-11-05 17:40', 'Visa', NULL),
+    (2, 'PIX',    700.00, '2026-11-16 10:15', NULL,   'E1234567820261116101500001');
+```
+
+</details>
 
 ### 5.5 Relatórios (SELECTs)
 
-Todos os relatórios usam junções e/ou as views da seção 5.3 (RF14). O arquivo completo é `sql/06_consultas_relatorios.sql`.
+As consultas estão em [`sql/06_consultas_relatorios.sql`](../sql/06_consultas_relatorios.sql). Todas usam junções (`JOIN`) ou views. Os resultados abaixo são os obtidos com os dados de exemplo (`sql/05_dados_exemplo.sql`). Para conferir, basta executar cada consulta no banco depois de rodar os scripts.
 
-**R01 — Disponibilidade atual da frota por loja e categoria (RF06)**
+#### R01 — Situação da frota por categoria
 
-```sql
-SELECT loja, categoria, valor_diaria, total_veiculos, disponiveis, locados, em_manutencao
-  FROM vw_disponibilidade_frota
- ORDER BY loja, categoria;
-```
-
-**R02 — Veículos livres para um período (categoria SUV, loja Centro) (RF06)**
+Mostra quantos carros de cada categoria estão disponíveis, alugados ou em manutenção.
 
 ```sql
-SELECT *
-  FROM fn_veiculos_disponiveis(3, 1, TIMESTAMP '2026-11-15 09:00', TIMESTAMP '2026-11-18 09:00');
+SELECT c.nome AS categoria, v.status, COUNT(*) AS quantidade
+FROM veiculo v
+JOIN categoria c ON c.id = v.categoria_id
+GROUP BY c.nome, v.status
+ORDER BY c.nome, v.status;
 ```
 
-**R03 — Reservas ativas (futuras), com cliente, categoria e lojas**
+| categoria | status | quantidade |
+|---|---|---:|
+| Econômico | DISPONIVEL | 2 |
+| Econômico | MANUTENCAO | 1 |
+| Luxo | LOCADO | 1 |
+| SUV | DISPONIVEL | 1 |
+
+#### R02 — Carros disponíveis para alugar (view vw_veiculos_disponiveis)
+
+Lista os carros que podem ser alugados agora, com a diária da categoria. Usa a view `vw_veiculos_disponiveis`.
 
 ```sql
-SELECT reserva_id, cliente, tipo_cliente, categoria, loja_retirada, loja_devolucao,
-       data_retirada_prevista, data_devolucao_prevista, valor_estimado, canal
-  FROM vw_reservas_detalhadas
- WHERE status = 'ATIVA'
- ORDER BY data_retirada_prevista;
+SELECT placa, modelo, ano, categoria, valor_diaria
+FROM vw_veiculos_disponiveis
+ORDER BY categoria, modelo;
 ```
 
-**R04 — Locações em aberto e quantos dias faltam para a devolução prevista**
+| placa | modelo | ano | categoria | valor_diaria |
+|---|---|---:|---|---:|
+| DEF4G56 | Chevrolet Onix | 2024 | Econômico | 120.00 |
+| ABC1D23 | Fiat Mobi | 2023 | Econômico | 120.00 |
+| GHI7J89 | Jeep Compass | 2023 | SUV | 220.00 |
+
+#### R03 — Carros na rua: locações abertas (view vw_locacoes_abertas)
+
+Mostra os carros que estão com clientes e quando devem voltar. Usa a view `vw_locacoes_abertas`.
 
 ```sql
-SELECT locacao_id, cliente, condutor, placa, veiculo, loja_retirada,
-       data_retirada, data_devolucao_prevista,
-       ROUND(EXTRACT(EPOCH FROM (data_devolucao_prevista - CURRENT_TIMESTAMP)) / 86400.0, 1) AS dias_para_devolver
-  FROM vw_locacoes_detalhadas
- WHERE status = 'ABERTA'
- ORDER BY data_devolucao_prevista;
+SELECT locacao_id, cliente, placa, modelo, data_retirada, data_devolucao_prevista
+FROM vw_locacoes_abertas
+ORDER BY data_retirada;
 ```
 
-**R05 — Faturamento mensal por forma de pagamento (RF14)**
+| locacao_id | cliente | placa | modelo | data_retirada | data_devolucao_prevista |
+|---:|---|---|---|---|---|
+| 3 | Marcos Almeida | JKL0M12 | Toyota Corolla X | 2026-11-20 | 2026-11-25 |
+
+#### R04 — Faturamento por categoria (view vw_faturamento_categoria)
+
+Soma o que foi recebido em cada categoria. Usa a view `vw_faturamento_categoria`.
 
 ```sql
-SELECT mes, qtd_pagamentos, total_recebido,
-       COALESCE(total_credito, 0) AS credito,
-       COALESCE(total_debito,  0) AS debito,
-       COALESCE(total_pix,     0) AS pix
-  FROM vw_faturamento_mensal
- ORDER BY mes;
+SELECT categoria, pagamentos, total
+FROM vw_faturamento_categoria
+ORDER BY total DESC;
 ```
 
-**R06 — Locações encerradas com saldo devedor**
+| categoria | pagamentos | total |
+|---|---:|---:|
+| SUV | 1 | 700.00 |
+| Econômico | 1 | 360.00 |
+| Luxo | 0 | 0 |
+
+#### R05 — Locações e total gasto por cliente
+
+Mostra quantas locações cada cliente fez e quanto gastou.
 
 ```sql
-SELECT locacao_id, cliente, valor_final, total_pago, saldo_devedor, status
-  FROM vw_saldo_locacao
- WHERE saldo_devedor > 0
- ORDER BY saldo_devedor DESC;
+SELECT cl.nome AS cliente, COUNT(l.id) AS locacoes, COALESCE(SUM(l.valor_final), 0) AS total_gasto
+FROM cliente cl
+LEFT JOIN reserva r ON r.cliente_id = cl.id
+LEFT JOIN locacao l ON l.reserva_id = r.id
+GROUP BY cl.nome
+ORDER BY total_gasto DESC;
 ```
 
-**R07 — Histórico de locações de um cliente (RF13) - exemplo: cliente 6**
+| cliente | locacoes | total_gasto |
+|---|---:|---:|
+| Carlos Pereira | 1 | 1452.00 |
+| Ana Lima | 1 | 360.00 |
+| Marcos Almeida | 1 | 0 |
+
+#### R06 — Recebimentos por forma de pagamento e categoria
+
+Separa os valores recebidos por forma de pagamento (cartão ou Pix) e por categoria.
 
 ```sql
-SELECT locacao_id, placa, veiculo, data_retirada, data_devolucao_real, valor_final, status
-  FROM vw_historico_cliente
- WHERE cliente_id = 6
- ORDER BY data_retirada DESC;
+SELECT p.tipo AS forma, c.nome AS categoria, COUNT(*) AS pagamentos, SUM(p.valor) AS total
+FROM pagamento p
+JOIN locacao l   ON l.id = p.locacao_id
+JOIN veiculo v   ON v.id = l.veiculo_id
+JOIN categoria c ON c.id = v.categoria_id
+GROUP BY p.tipo, c.nome
+ORDER BY p.tipo, c.nome;
 ```
 
-**R08 — Ranking de utilização da frota (locações, km rodados e receita)**
+| forma | categoria | pagamentos | total |
+|---|---|---:|---:|
+| CARTAO | Econômico | 1 | 360.00 |
+| PIX | SUV | 1 | 700.00 |
+
+#### R07 — Saldo devedor das locações já devolvidas
+
+Mostra, para cada locação devolvida, quanto foi cobrado, quanto já foi pago e quanto falta pagar.
 
 ```sql
-SELECT placa, veiculo, categoria, loja_atual, qtd_locacoes, km_rodados, receita_total
-  FROM vw_utilizacao_frota
- ORDER BY receita_total DESC, qtd_locacoes DESC;
+SELECT l.id AS locacao, cl.nome AS cliente, l.valor_final,
+       COALESCE(SUM(p.valor), 0) AS pago,
+       l.valor_final - COALESCE(SUM(p.valor), 0) AS saldo
+FROM locacao l
+JOIN reserva r      ON r.id = l.reserva_id
+JOIN cliente cl     ON cl.id = r.cliente_id
+LEFT JOIN pagamento p ON p.locacao_id = l.id
+WHERE l.status IN ('ENCERRADA', 'PAGA')
+GROUP BY l.id, cl.nome, l.valor_final
+ORDER BY saldo DESC;
 ```
 
-**R09 — Receita por categoria de veículo (junção direta + agrupamento)**
-
-```sql
-SELECT cat.nome                      AS categoria,
-       COUNT(lo.id)                  AS locacoes,
-       ROUND(AVG(lo.valor_final), 2) AS ticket_medio,
-       SUM(lo.valor_final)           AS receita_total
-  FROM locacao lo
-  JOIN veiculo v             ON v.id = lo.veiculo_id
-  JOIN categoria_veiculo cat ON cat.id = v.categoria_id
- WHERE lo.status <> 'ABERTA'
- GROUP BY cat.nome
- ORDER BY receita_total DESC;
-```
-
-**R10 — Multas pendentes de pagamento (RF24)**
-
-```sql
-SELECT multa_id, cliente, placa, descricao, data_infracao, valor, cautela_status
-  FROM vw_multas_pendentes
- ORDER BY data_infracao;
-```
-
-**R11 — Manutenções: veículo, tipo, responsável e custo**
-
-```sql
-SELECT m.id AS manutencao_id, v.placa, v.marca || ' ' || v.modelo AS veiculo,
-       m.tipo, m.descricao, m.data_entrada, m.data_saida,
-       COALESCE(m.custo, 0) AS custo, m.status, p.nome AS registrado_por
-  FROM manutencao m
-  JOIN veiculo v    ON v.id = m.veiculo_id
-  JOIN pessoa p     ON p.id = m.funcionario_id
- ORDER BY m.data_entrada DESC;
-```
-
-**R12 — Desempenho por loja de retirada (locações e receita)**
-
-```sql
-SELECT l.nome                         AS loja,
-       COUNT(lo.id)                   AS locacoes,
-       COALESCE(SUM(lo.valor_final), 0) AS receita
-  FROM loja l
-  LEFT JOIN locacao lo ON lo.loja_retirada_id = l.id AND lo.status <> 'ABERTA'
- GROUP BY l.nome
- ORDER BY receita DESC;
-```
-
-**R13 — Trilha de auditoria de pagamentos e preços (RF17) - preenchida pelos triggers**
-
-```sql
-SELECT id, tabela, operacao, registro_id, usuario_db, data_hora
-  FROM auditoria
- ORDER BY data_hora DESC, id DESC
- LIMIT 50;
-```
-
+| locacao | cliente | valor_final | pago | saldo |
+|---:|---|---:|---:|---:|
+| 2 | Carlos Pereira | 1452.00 | 700.00 | 752.00 |
+| 1 | Ana Lima | 360.00 | 360.00 | 0.00 |
 
 ### 5.6 Triggers
 
-São oito gatilhos, que implementam as regras que o banco precisa garantir sozinho:
-
-| Trigger | Tabela | Regra |
+| Trigger | Tabela e momento | O que faz |
 |---|---|---|
-| `trg_locacao_conflito` | `locacao` | Impede duas locações no mesmo período para o mesmo veículo e veículo indisponível (RN03, RN04, RF15) |
-| `trg_locacao_valida_condutor` | `locacao` | Condutor com 21 anos ou mais e CNH válida, emitida há 2 anos ou mais (RN05, RF16) |
-| `trg_locacao_atualiza_veiculo` | `locacao` | Marca o veículo como locado na retirada e disponível na devolução (RF15) |
-| `trg_locacao_imutavel` | `locacao` | Bloqueia alteração de locação encerrada ou paga (RN09) |
-| `trg_auditoria_pagamento` | `pagamento` | Grava na auditoria toda inclusão e alteração de pagamento (RF17) |
-| `trg_auditoria_preco` | `categoria_veiculo` | Grava na auditoria toda alteração de preços (RF17) |
-| `trg_manutencao_status_veiculo` | `manutencao` | Coloca o veículo em manutenção e o devolve à frota ao concluir (RN04, RN11) |
-| `trg_multa_libera_cautela` | `multa` | Libera a cautela quando a última multa pendente é paga |
+| `trg_validar_locacao` | `locacao`, antes de incluir | Impede alugar um carro que não está `DISPONIVEL` ou que já tem locação aberta |
+| `trg_liberar_veiculo` | `locacao`, depois de mudar o status | Quando a locação é encerrada, o carro volta a ficar `DISPONIVEL` e recebe a quilometragem de chegada |
+| `trg_validar_cnh` | `reserva`, antes de incluir | Impede reserva se a CNH do cliente vencer antes da devolução prevista |
+| `trg_auditar_pagamento` | `pagamento`, depois de incluir, alterar ou excluir | Grava cada operação em `auditoria_pagamento`, com valor antigo, valor novo, usuário e data |
 
-O código está em [`sql/08_gatilhos.sql`](../sql/08_gatilhos.sql).
+A função do trigger de auditoria é `SECURITY DEFINER`: roda com as permissões do dono do banco, por isso os pagamentos feitos pelo atendente também são auditados, mesmo ele não tendo acesso à tabela de auditoria.
+
+<details>
+<summary>07_gatilhos.sql</summary>
+
+```sql
+-- Next Drive - gatilhos (triggers).
+
+DROP TABLE IF EXISTS auditoria_pagamento;
+
+CREATE TABLE auditoria_pagamento (
+    id            SERIAL PRIMARY KEY,
+    pagamento_id  INTEGER       NOT NULL,
+    operacao      VARCHAR(6)    NOT NULL,
+    valor_antigo  NUMERIC(10,2),
+    valor_novo    NUMERIC(10,2),
+    usuario       VARCHAR(60)   NOT NULL DEFAULT current_user,
+    data_hora     TIMESTAMP     NOT NULL DEFAULT now()
+);
+
+-- 1. Não deixa alugar um carro que não está disponível ou que já tem locação aberta.
+CREATE OR REPLACE FUNCTION fn_validar_locacao() RETURNS TRIGGER AS $$
+DECLARE
+    v_status VARCHAR(12);
+BEGIN
+    SELECT status INTO v_status FROM veiculo WHERE id = NEW.veiculo_id;
+    IF v_status IS DISTINCT FROM 'DISPONIVEL' THEN
+        RAISE EXCEPTION 'O veículo % não está disponível (situação: %).', NEW.veiculo_id, v_status;
+    END IF;
+    IF EXISTS (SELECT 1 FROM locacao WHERE veiculo_id = NEW.veiculo_id AND status = 'ABERTA') THEN
+        RAISE EXCEPTION 'O veículo % já tem uma locação aberta.', NEW.veiculo_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_validar_locacao ON locacao;
+CREATE TRIGGER trg_validar_locacao
+    BEFORE INSERT ON locacao
+    FOR EACH ROW EXECUTE FUNCTION fn_validar_locacao();
+
+-- 2. Quando a locação é encerrada, o carro volta a ficar disponível e recebe a quilometragem nova.
+CREATE OR REPLACE FUNCTION fn_liberar_veiculo() RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE veiculo
+       SET status = 'DISPONIVEL',
+           quilometragem = COALESCE(NEW.km_chegada, quilometragem)
+     WHERE id = NEW.veiculo_id AND status = 'LOCADO';
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_liberar_veiculo ON locacao;
+CREATE TRIGGER trg_liberar_veiculo
+    AFTER UPDATE OF status ON locacao
+    FOR EACH ROW
+    WHEN (OLD.status = 'ABERTA' AND NEW.status IN ('ENCERRADA', 'PAGA'))
+    EXECUTE FUNCTION fn_liberar_veiculo();
+
+-- 3. Não deixa fazer reserva para cliente com CNH que vence antes da devolução.
+CREATE OR REPLACE FUNCTION fn_validar_cnh() RETURNS TRIGGER AS $$
+DECLARE
+    v_validade DATE;
+BEGIN
+    SELECT cnh_validade INTO v_validade FROM cliente WHERE id = NEW.cliente_id;
+    IF v_validade < NEW.data_devolucao_prevista THEN
+        RAISE EXCEPTION 'A CNH do cliente vence em %, antes da devolução.', v_validade;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_validar_cnh ON reserva;
+CREATE TRIGGER trg_validar_cnh
+    BEFORE INSERT ON reserva
+    FOR EACH ROW EXECUTE FUNCTION fn_validar_cnh();
+
+-- 4. Auditoria: guarda toda inclusão, alteração e exclusão de pagamentos.
+CREATE OR REPLACE FUNCTION fn_auditar_pagamento() RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        INSERT INTO auditoria_pagamento (pagamento_id, operacao, valor_novo)
+        VALUES (NEW.id, TG_OP, NEW.valor);
+        RETURN NEW;
+    ELSIF TG_OP = 'UPDATE' THEN
+        INSERT INTO auditoria_pagamento (pagamento_id, operacao, valor_antigo, valor_novo)
+        VALUES (NEW.id, TG_OP, OLD.valor, NEW.valor);
+        RETURN NEW;
+    END IF;
+    INSERT INTO auditoria_pagamento (pagamento_id, operacao, valor_antigo)
+    VALUES (OLD.id, TG_OP, OLD.valor);
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+DROP TRIGGER IF EXISTS trg_auditar_pagamento ON pagamento;
+CREATE TRIGGER trg_auditar_pagamento
+    AFTER INSERT OR UPDATE OR DELETE ON pagamento
+    FOR EACH ROW EXECUTE FUNCTION fn_auditar_pagamento();
+```
+
+</details>
 
 ### 5.7 Procedures
 
-| Procedure | Função |
-|---|---|
-| `sp_cancelar_reserva` | Cancela uma reserva ativa exigindo justificativa (RF08) |
-| `sp_abrir_locacao` | Registra a retirada: valida a reserva, cria a locação com a diária vigente e a cautela (RF09) |
-| `sp_registrar_devolucao` | Registra a devolução e calcula o valor final: diárias, horas extras, combustível, taxa de outra loja e desconto (RF10, RN06 a RN08) |
-| `sp_registrar_pagamento` | Registra pagamento em cartão ou PIX, quita a locação e libera a cautela quando cabível (RF11, RN12) |
-| `fn_autenticar` | Valida e-mail e senha (bcrypt) e devolve apenas pessoa, nome e perfil (RF02) |
+| Rotina | Tipo | O que faz |
+|---|---|---|
+| `fn_valor_final(locacao, data)` | Função | Calcula o valor da locação: diárias (mínimo 1) mais 30% da diária por dia de atraso |
+| `sp_devolver_veiculo(locacao, km, data)` | Procedure | Registra a devolução: confere se a locação está aberta, se a quilometragem e a data são válidas, calcula o valor e encerra a locação |
+| `sp_cancelar_reserva(reserva, justificativa)` | Procedure | Cancela uma reserva ativa, exigindo a justificativa |
 
-O código está em [`sql/09_procedimentos.sql`](../sql/09_procedimentos.sql).
+Exemplo de uso: `CALL sp_devolver_veiculo(3, 5900, '2026-11-26');` encerra a locação 3 com 5.900 km.
+
+<details>
+<summary>08_procedimentos.sql</summary>
+
+```sql
+-- Next Drive - função e procedures.
+
+-- Calcula o valor final: diárias (mínimo 1) mais 30% da diária por dia de atraso.
+CREATE OR REPLACE FUNCTION fn_valor_final(p_locacao_id INTEGER, p_devolucao DATE) RETURNS NUMERIC AS $$
+DECLARE
+    v_diaria    NUMERIC;
+    v_retirada  DATE;
+    v_prevista  DATE;
+    v_dias      INTEGER;
+    v_atraso    INTEGER;
+BEGIN
+    SELECT c.valor_diaria, l.data_retirada, r.data_devolucao_prevista
+      INTO v_diaria, v_retirada, v_prevista
+      FROM locacao l
+      JOIN reserva r   ON r.id = l.reserva_id
+      JOIN veiculo v   ON v.id = l.veiculo_id
+      JOIN categoria c ON c.id = v.categoria_id
+     WHERE l.id = p_locacao_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Locação % não encontrada.', p_locacao_id;
+    END IF;
+    v_dias   := GREATEST(1, p_devolucao - v_retirada);
+    v_atraso := GREATEST(0, p_devolucao - v_prevista);
+    RETURN ROUND(v_diaria * v_dias + v_diaria * 0.30 * v_atraso, 2);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Registra a devolução: guarda quilometragem e data, calcula o valor e encerra a locação.
+CREATE OR REPLACE PROCEDURE sp_devolver_veiculo(p_locacao_id INTEGER, p_km INTEGER, p_devolucao DATE)
+AS $$
+DECLARE
+    v_loc locacao%ROWTYPE;
+BEGIN
+    SELECT * INTO v_loc FROM locacao WHERE id = p_locacao_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Locação % não encontrada.', p_locacao_id;
+    END IF;
+    IF v_loc.status <> 'ABERTA' THEN
+        RAISE EXCEPTION 'A locação % já foi encerrada.', p_locacao_id;
+    END IF;
+    IF p_km < v_loc.km_saida THEN
+        RAISE EXCEPTION 'A quilometragem não pode ser menor que a da saída (%).', v_loc.km_saida;
+    END IF;
+    IF p_devolucao < v_loc.data_retirada THEN
+        RAISE EXCEPTION 'A devolução não pode ser antes da retirada.';
+    END IF;
+    UPDATE locacao
+       SET data_devolucao_real = p_devolucao,
+           km_chegada = p_km,
+           valor_final = fn_valor_final(p_locacao_id, p_devolucao),
+           status = 'ENCERRADA'
+     WHERE id = p_locacao_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Cancela uma reserva ativa, guardando a justificativa.
+CREATE OR REPLACE PROCEDURE sp_cancelar_reserva(p_reserva_id INTEGER, p_justificativa VARCHAR)
+AS $$
+DECLARE
+    v_status VARCHAR(10);
+BEGIN
+    SELECT status INTO v_status FROM reserva WHERE id = p_reserva_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Reserva % não encontrada.', p_reserva_id;
+    END IF;
+    IF v_status <> 'ATIVA' THEN
+        RAISE EXCEPTION 'Só é possível cancelar reservas ativas (situação atual: %).', v_status;
+    END IF;
+    IF p_justificativa IS NULL OR length(trim(p_justificativa)) = 0 THEN
+        RAISE EXCEPTION 'Informe a justificativa do cancelamento.';
+    END IF;
+    UPDATE reserva SET status = 'CANCELADA', justificativa_cancelamento = p_justificativa WHERE id = p_reserva_id;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+</details>
 
 ### 5.8 Perfis e políticas de acesso
 
-O acesso ao banco foi planejado pelo princípio do **privilégio mínimo**: tudo é negado por padrão e cada grupo recebe só o que o processo exige. Nenhum perfil pode excluir registros: locações e reservas mudam de status em vez de serem apagadas.
+As permissões são dadas a dois grupos, e cada usuário herda as do seu grupo:
 
-#### Perfis (grupos) e usuários de exemplo
+| Grupo | Usuário de exemplo | Pode fazer |
+|---|---|---|
+| `grupo_atendente` | `atendente_nextdrive` | Consultar tudo (menos auditoria e faturamento), cadastrar e alterar clientes, reservas, locações e pagamentos, e alterar a situação dos carros. **Não exclui nada.** |
+| `grupo_gerente` | `gerente_nextdrive` | Tudo do atendente, mais cadastrar e excluir categorias, carros, clientes e reservas, ler a auditoria e o faturamento. Nem o gerente exclui locações e pagamentos. |
 
-| Grupo | Usuário de exemplo | Quem usa | Função |
-|---|---|---|---|
-| `grp_gerente` | `usr_gerente` | Gerente da locadora | Gerencia funcionários, frota, categorias, preços e lojas; consulta todos os relatórios. |
-| `grp_atendente` | `usr_atendente` | Atendente de balcão | Cadastra clientes e opera reservas, retiradas, devoluções, pagamentos e multas. |
-| `grp_auditor` | `usr_auditor` | Auditoria | Somente leitura da trilha de auditoria e dos relatórios. |
-| `grp_site` | `usr_site` | Aplicação web (clientes) | Cadastro do próprio cliente e criação de reservas pelo site. |
+A matriz completa e como conferir no DBeaver estão em [`docs/politicas-de-acesso.md`](politicas-de-acesso.md).
 
-> As senhas de exemplo (`Trocar@123`) servem só para testes. Troque-as com
-> `ALTER ROLE usr_gerente PASSWORD '...';` antes de qualquer uso real.
-> Os usuários do banco são diferentes dos usuários do sistema (tabela `pessoa`), que fazem login pela função `fn_autenticar`.
+<details>
+<summary>09_roles_privilegios.sql</summary>
 
-#### Matriz de privilégios
+```sql
+-- Next Drive - controle de acesso (grupos, usuários e privilégios).
+-- Rode depois dos scripts de tabelas, gatilhos e procedimentos.
 
-Legenda: **S** = SELECT, **I** = INSERT, **U** = UPDATE, **X** = EXECUTE, — = sem acesso. **Nenhum perfil tem DELETE**.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'grupo_atendente') THEN
+        CREATE ROLE grupo_atendente NOLOGIN;
+    END IF;
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'grupo_gerente') THEN
+        CREATE ROLE grupo_gerente NOLOGIN;
+    END IF;
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'atendente_nextdrive') THEN
+        CREATE ROLE atendente_nextdrive LOGIN PASSWORD 'Atendente@123' IN ROLE grupo_atendente;
+    END IF;
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'gerente_nextdrive') THEN
+        CREATE ROLE gerente_nextdrive LOGIN PASSWORD 'Gerente@123' IN ROLE grupo_gerente;
+    END IF;
+END
+$$;
 
-| Objeto | Gerente | Atendente | Auditor | Site |
-|---|---|---|---|---|
-| `loja`, `categoria_veiculo`, `veiculo` | S I U | S | — | S (loja e categoria) |
-| `parametro_sistema` | S I U | S | — | — |
-| `pessoa` (sem `senha_hash`) | S I U* | S I U* | — | S I |
-| `funcionario` | S I U | S (apenas `pessoa_id`, `cargo`, `loja_id`, `ativo`) | — | — |
-| `cliente`, `cliente_pf`, `cliente_pj` | S I U | S I U | — | I |
-| `reserva` | S I U | S I U | — | I |
-| `locacao` | S I U | S I U | — | — |
-| `pagamento`, `pagamento_cartao`, `pagamento_pix` | S I U | S I U | — | — |
-| `multa` | S I U | S I U | — | — |
-| `manutencao` | S I U | — | — | — |
-| `auditoria` | **S** | — | **S** | — |
-| Views de relatório | todas | disponibilidade, reservas, locações, saldo, histórico, multas pendentes | todas | só `vw_disponibilidade_frota` |
-| Procedures `sp_*` | X | X | — | — |
-| `fn_autenticar` (login) | X | X | X | X |
-| `fn_veiculos_disponiveis` | X | X | — | X |
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM grupo_atendente, grupo_gerente;
+GRANT USAGE ON SCHEMA public TO grupo_atendente, grupo_gerente;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO grupo_atendente, grupo_gerente;
 
-\* Em `pessoa`, o gerente altera nome, e-mail, senha e telefone; o atendente altera apenas nome, e-mail e telefone (cadastro de funcionários é exclusivo do gerente - RN10).
+-- Atendente: consulta tudo (menos a auditoria), cadastra e altera, mas não exclui nada.
+GRANT SELECT ON categoria, cliente, veiculo, reserva, locacao, pagamento TO grupo_atendente;
+GRANT INSERT, UPDATE ON cliente, reserva, locacao, pagamento TO grupo_atendente;
+GRANT UPDATE ON veiculo TO grupo_atendente;
 
-#### Princípios aplicados
+-- Gerente: tudo do atendente, mais gerenciar categorias e carros, excluir cadastros e ver a auditoria.
+GRANT SELECT, INSERT, UPDATE, DELETE ON categoria, cliente, veiculo, reserva TO grupo_gerente;
+GRANT SELECT, INSERT, UPDATE ON locacao, pagamento TO grupo_gerente;
+GRANT SELECT ON auditoria_pagamento TO grupo_gerente;
 
-1. **Privilégio mínimo:** cada grupo recebe só o que o processo de negócio exige; tudo o mais é negado por padrão (`REVOKE ALL ... FROM PUBLIC`).
-2. **Sem exclusão:** nenhuma tabela recebe `DELETE`. Locações e reservas mudam de status (`CANCELADA`, `ENCERRADA`) em vez de serem apagadas.
-3. **Auditoria imutável:** só os triggers (`SECURITY DEFINER`) escrevem em `auditoria`. Nem o gerente consegue alterá-la.
-4. **Senhas protegidas:** `pessoa.senha_hash` guarda bcrypt (`pgcrypto`) e nenhum perfil consegue ler a coluna. O login é feito por `fn_autenticar`, que devolve apenas pessoa, nome e perfil.
-5. **Relatórios por views:** perfis consultam as views e não precisam de acesso direto às tabelas base.
-6. **Dados só pelas regras:** o status do veículo é alterado exclusivamente por triggers, e não por usuários.
+-- Views dos relatórios: o atendente vê os carros disponíveis e as locações abertas;
+-- o faturamento fica só para o gerente.
+GRANT SELECT ON vw_veiculos_disponiveis, vw_locacoes_abertas TO grupo_atendente;
+GRANT SELECT ON vw_veiculos_disponiveis, vw_locacoes_abertas, vw_faturamento_categoria TO grupo_gerente;
+```
 
-O código está em [`sql/07_roles_privilegios.sql`](../sql/07_roles_privilegios.sql) e os testes de verificação em [`docs/politicas-de-acesso.md`](politicas-de-acesso.md).
-
+</details>
 
 ### 5.9 Backup e restauração
 
-#### Política
-
 | Item | Definição |
 |---|---|
-| **O que é copiado** | Banco `next_drive` completo (tabelas, dados, views, índices, triggers, procedures e privilégios) e, separadamente, os usuários/grupos do servidor (roles). |
-| **Frequência** | Backup completo **diário** (de madrugada, fora do horário de balcão). Backup de roles **semanal** e sempre que um perfil mudar. |
-| **Formato** | `pg_dump -Fc` (custom): comprimido, e permite restaurar só algumas tabelas. |
-| **Retenção** | 7 dias no disco (o script apaga os mais antigos). Recomenda-se uma cópia semanal fora da máquina do banco. |
-| **Verificação** | Todo backup é conferido com `pg_restore --list` logo após ser gerado. |
-| **Teste de restauração** | **Mensal**: restaurar o backup mais recente em um banco `next_drive_restore` e comparar contagens. |
-| **Segurança** | Senha via `PGPASSWORD` ou `~/.pgpass`; nunca dentro do script. Arquivos de backup com acesso restrito ao administrador. |
-| **Perda máxima aceita (RPO)** | Até 24 horas (backup diário). Para menos, habilitar arquivamento de WAL (melhoria futura). |
+| Ferramentas | `pg_dump` (formato *custom*) e `pg_restore` |
+| Frequência | Um backup por dia, fora do horário de atendimento |
+| Retenção | Últimos 7 dias, mais uma cópia semanal fora do computador do banco |
+| Restauração | Sempre em um banco separado (`nextdrive_restaurado`), para não sobrescrever o banco em uso |
+| Uso | `bash 10_backup_restore.sh backup` e `bash 10_backup_restore.sh restaurar arquivo.backup` |
 
-#### Resultado do teste realizado
+Resultado do teste realizado com os dados de exemplo:
 
 | Conferência | Banco original | Banco restaurado |
-|---|---|---|
-| Tabelas | 17 | 17 |
-| Locações | 6 | 6 |
-| Pagamentos | 5 | 5 |
-| Veículos | 10 | 10 |
-| Triggers | 8 | 8 |
+|---|:---:|:---:|
+| Clientes | 3 | 3 |
+| Veículos | 5 | 5 |
+| Reservas | 5 | 5 |
+| Locações | 3 | 3 |
+| Pagamentos | 2 | 2 |
+| Triggers | 4 | 4 |
+| Views | 3 | 3 |
+| Funções e procedures | 7 | 7 |
 
-O script também recusa restaurar sobre um banco que já existe, evitando sobrescrever dados por engano.
+O passo a passo completo, inclusive no Windows (Git Bash, DBeaver e Prompt de Comando), está em [`docs/backup-restore.md`](backup-restore.md).
 
-O script está em [`sql/10_backup_restauração.sh`](../sql/10_backup_restaura%C3%A7%C3%A3o.sh) e o passo a passo (Linux e Windows) em [`docs/backup-restore.md`](backup-restore.md).
+<details>
+<summary>10_backup_restore.sh</summary>
 
----
+```bash
+#!/bin/bash
+# Next Drive - backup e restauração do banco.
+# Uso:  ./10_backup_restore.sh backup
+#       ./10_backup_restore.sh restaurar arquivo.backup
+# Se a porta ou o usuário forem diferentes, mude as variáveis abaixo.
+# A senha do PostgreSQL pode ser informada antes:  export PGPASSWORD=suasenha
+
+BANCO=nextdrive
+RESTAURADO=nextdrive_restaurado
+USUARIO=postgres
+HOST=localhost
+PORTA=${PORTA:-5432}
+PASTA=./backups
+
+case "$1" in
+    backup)
+        mkdir -p "$PASTA"
+        ARQUIVO="$PASTA/${BANCO}_$(date +%Y%m%d_%H%M%S).backup"
+        pg_dump -h "$HOST" -p "$PORTA" -U "$USUARIO" -Fc -f "$ARQUIVO" "$BANCO" && echo "Backup salvo em $ARQUIVO"
+        ;;
+    restaurar)
+        if [ -z "$2" ]; then
+            echo "Informe o arquivo de backup."
+            exit 1
+        fi
+        dropdb -h "$HOST" -p "$PORTA" -U "$USUARIO" --if-exists "$RESTAURADO"
+        createdb -h "$HOST" -p "$PORTA" -U "$USUARIO" "$RESTAURADO"
+        pg_restore -h "$HOST" -p "$PORTA" -U "$USUARIO" -d "$RESTAURADO" "$2" && echo "Banco $RESTAURADO restaurado a partir de $2"
+        ;;
+    *)
+        echo "Uso: $0 backup | $0 restaurar arquivo.backup"
+        exit 1
+        ;;
+esac
+```
+
+</details>
 
 ## 6 Modelagem UML
 
