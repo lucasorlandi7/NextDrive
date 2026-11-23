@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Next Drive</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+    <div id="topo"></div>
+
+    <div class="container pb-5">
+        <div id="mensagem" class="alert d-none" role="alert"></div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5>Cadastrar cliente</h5>
+                <div class="row g-2">
+                    <div class="col-md-4"><input id="cliente-nome" class="form-control" placeholder="Nome"></div>
+                    <div class="col-md-4"><input id="cliente-cpf" class="form-control" placeholder="CPF (11 números)" maxlength="11"></div>
+                    <div class="col-md-4"><input id="cliente-email" class="form-control" placeholder="E-mail"></div>
+                    <div class="col-md-4"><input id="cliente-cnh" class="form-control" placeholder="CNH (11 números)" maxlength="11"></div>
+                    <div class="col-md-4"><input id="cliente-validade" type="date" class="form-control" title="Validade da CNH"></div>
+                    <div class="col-md-4"><button class="btn btn-primary" id="cliente-salvar">Cadastrar cliente</button></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h5>Clientes cadastrados</h5>
+                <table class="table table-striped mb-0">
+                    <thead><tr><th>Nome</th><th>CPF</th><th>E-mail</th><th>CNH válida até</th><th></th></tr></thead>
+                    <tbody id="tabela-clientes"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+        verificarLogin();
+        montarMenu('clientes.html');
+
+        function carregarClientes() {
+            $.get('/clientes', function (lista) {
+                $('#tabela-clientes').empty();
+                lista.forEach(function (c) {
+                    var excluir = botao('Excluir', 'btn-outline-danger', function () {
+                        if (confirm('Excluir o cliente ' + c.nome + '?')) {
+                            enviar('DELETE', '/clientes/' + c.id, null, carregarClientes);
+                        }
+                    });
+                    $('#tabela-clientes').append(linha([c.nome, c.cpf, c.email, c.cnhValidade, excluir]));
+                });
+            });
+        }
+
+        $('#cliente-salvar').click(function () {
+            var dados = {
+                nome: $('#cliente-nome').val(),
+                cpf: $('#cliente-cpf').val(),
+                email: $('#cliente-email').val(),
+                cnhNumero: $('#cliente-cnh').val(),
+                cnhValidade: $('#cliente-validade').val()
+            };
+            enviar('POST', '/clientes', dados, function () {
+                $('#cliente-nome, #cliente-cpf, #cliente-email, #cliente-cnh, #cliente-validade').val('');
+                carregarClientes();
+            });
+        });
+
+        carregarClientes();
+    </script>
+</body>
+
+</html>
