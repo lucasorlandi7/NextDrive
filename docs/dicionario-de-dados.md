@@ -1,10 +1,10 @@
-### 4.5 Dicionário de dados
+# Dicionário de Dados — Next Drive
 
 Banco **PostgreSQL 16**, com 7 tabelas. As seis primeiras são criadas em [`sql/02_create_tables.sql`](../sql/02_create_tables.sql); a `auditoria_pagamento` é criada em [`sql/07_gatilhos.sql`](../sql/07_gatilhos.sql), junto com o trigger que a preenche.
 
 Legenda: **PK** = chave primária · **FK** = chave estrangeira · **UK** = valor único · **Nulo** = se o campo pode ficar vazio.
 
-#### categoria
+## categoria
 
 Categorias de carro e o preço da diária de cada uma.
 
@@ -14,7 +14,7 @@ Categorias de carro e o preço da diária de cada uma.
 | `nome` | `VARCHAR(60)` | Não | **UK**: não pode haver duas categorias com o mesmo nome (ex.: Econômico, SUV, Luxo) |
 | `valor_diaria` | `NUMERIC(10,2)` | Não | Preço de uma diária; `CHECK (valor_diaria > 0)` |
 
-#### cliente
+## cliente
 
 Pessoas que alugam os carros.
 
@@ -28,7 +28,7 @@ Pessoas que alugam os carros.
 | `cnh_numero` | `VARCHAR(11)` | Não | Número da CNH |
 | `cnh_validade` | `DATE` | Não | O trigger `trg_validar_cnh` impede reserva se a CNH vencer antes da devolução prevista |
 
-#### veiculo
+## veiculo
 
 Carros da frota.
 
@@ -42,7 +42,7 @@ Carros da frota.
 | `status` | `VARCHAR(12)` | Não | Padrão `DISPONIVEL`; só aceita `DISPONIVEL`, `LOCADO` ou `MANUTENCAO` |
 | `categoria_id` | `INTEGER` | Não | **FK** → `categoria(id)` |
 
-#### reserva
+## reserva
 
 Pedido do cliente para uma categoria em um período.
 
@@ -56,7 +56,7 @@ Pedido do cliente para uma categoria em um período.
 | `status` | `VARCHAR(10)` | Não | Padrão `ATIVA`; só aceita `ATIVA`, `CANCELADA` ou `EFETIVADA` |
 | `justificativa_cancelamento` | `VARCHAR(200)` | Sim | Preenchida pela procedure `sp_cancelar_reserva`, que exige o motivo |
 
-#### locacao
+## locacao
 
 O aluguel em si: começa na retirada do carro e termina na devolução.
 
@@ -74,7 +74,7 @@ O aluguel em si: começa na retirada do carro e termina na devolução.
 
 As regras de devolução (datas, quilometragem e valor) ficam na procedure `sp_devolver_veiculo` e na função `fn_valor_final` ([`sql/08_procedimentos.sql`](../sql/08_procedimentos.sql)).
 
-#### pagamento
+## pagamento
 
 Pagamentos de uma locação, por cartão ou Pix. Uma locação pode ser paga em várias partes.
 
@@ -88,7 +88,7 @@ Pagamentos de uma locação, por cartão ou Pix. Uma locação pode ser paga em 
 | `bandeira` | `VARCHAR(20)` | Sim | Obrigatória quando o tipo é `CARTAO` (`ck_pagamento_tipo`) |
 | `txid` | `VARCHAR(35)` | Sim | Código da transação Pix; obrigatório quando o tipo é `PIX` (`ck_pagamento_tipo`) |
 
-#### auditoria_pagamento
+## auditoria_pagamento
 
 Histórico de tudo o que acontece com os pagamentos. É preenchida só pelo trigger `trg_auditar_pagamento`.
 
@@ -102,7 +102,7 @@ Histórico de tudo o que acontece com os pagamentos. É preenchida só pelo trig
 | `usuario` | `VARCHAR(60)` | Não | Padrão: usuário do banco que fez a operação (`current_user`) |
 | `data_hora` | `TIMESTAMP` | Não | Padrão: momento da operação |
 
-#### Views
+## Views
 
 | View | O que mostra |
 |---|---|
@@ -110,7 +110,7 @@ Histórico de tudo o que acontece com os pagamentos. É preenchida só pelo trig
 | `vw_locacoes_abertas` | Locações em andamento, com cliente, carro e devolução prevista |
 | `vw_faturamento_categoria` | Quantidade e total de pagamentos por categoria |
 
-#### Índices
+## Índices
 
 Além dos índices criados automaticamente pelas chaves primárias e pelos campos únicos (`placa`, `cpf`, `email`, `nome` da categoria e `reserva_id` da locação), o script [`sql/03_indices.sql`](../sql/03_indices.sql) cria:
 
