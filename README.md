@@ -1,6 +1,7 @@
 # Next Drive — Sistema de Aluguel de Veículos
 
-Sistema web para gerenciamento de aluguel de veículos em uma locadora com várias lojas. O sistema contempla o processo de reserva, retirada, devolução, pagamento e pós-locação, incluindo o registro de multas e a liberação da caução.
+Sistema web para gerenciamento de aluguel de veículos. O sistema contempla o cadastro de clientes e veículos, reservas, locações, devoluções e pagamentos.
+
 
 **Trabalho Final Integrado — Programação II, Engenharia de Software I e Banco de Dados II**
 
@@ -15,7 +16,8 @@ Ciência da Computação — UNOESC
 
 ## 1. Resumo
 
-O Next Drive tem como objetivo informatizar o processo de aluguel de veículos, permitindo o gerenciamento de clientes, funcionários, veículos, categorias, lojas, reservas, locações, pagamentos e multas.
+
+O Next Drive tem como objetivo informatizar o processo de aluguel de veículos, permitindo o gerenciamento de clientes, veículos, categorias, reservas, locações e pagamentos.
 
 O sistema busca organizar as operações da locadora, controlar a disponibilidade dos veículos e garantir a integridade das informações armazenadas no banco de dados.
 
@@ -25,25 +27,22 @@ O projeto integra três disciplinas:
 - **Engenharia de Software I (ESI):** modelagem do sistema por meio de diagramas UML e organização do desenvolvimento.
 - **Banco de Dados II (BDII):** modelagem relacional, consultas SQL, índices, views, triggers, procedures, controle de acesso e backup.
 
+
 ## 2. O que o sistema faz
 
 | Perfil | Funcionalidades |
 |---|---|
-| Cliente | Cadastro, consulta de disponibilidade, realização de reservas e acompanhamento das locações. |
-| Atendente | Cadastro de clientes, reservas, cancelamentos, retirada, devolução, pagamentos e multas. |
-| Gerente | Gerenciamento de funcionários, veículos, categorias, lojas, preços, manutenções e relatórios. |
+| Administrador | Cadastrar clientes e carros, realizar aluguéis, registrar devoluções e pagamentos, colocar carros em manutenção e consultar locações. |
 
 ### 2.1 Processo de locação
 
 O funcionamento geral do sistema contempla:
 
-1. Reserva de veículos conforme categoria, loja e período.
-2. Verificação da disponibilidade.
-3. Retirada do veículo, com registro de quilometragem, combustível e caução.
-4. Devolução, com registro das condições do veículo.
-5. Cálculo do valor final da locação.
-6. Registro do pagamento e liberação da caução, quando aplicável.
-7. Registro de multas vinculadas às locações.
+1. Cadastro de clientes e carros.
+2. Aluguel de um carro disponível.
+3. Devolução do veículo com registro da quilometragem.
+4. Cálculo do valor final da locação, considerando as diárias e possíveis multas por atraso.
+5. Pagamento por cartão ou Pix.
 
 
 ## 3. Requisitos do sistema
@@ -60,7 +59,7 @@ O funcionamento geral do sistema contempla:
 | RF06 | Permitir alugar um carro disponível, escolhendo o carro, o cliente e as datas de retirada e devolução. | PII |
 | RF07 | Permitir o cancelamento de reservas com justificativa, por meio de procedure. | BDII |
 | RF08 | Permitir a devolução do carro, informando a quilometragem. | PII |
-| RF09 | Calcular o valor final da locação (diárias mais multa por atraso) por meio de procedure. | BDII |
+| RF09 | Calcular o valor final da locação (diárias mais multa por atraso) por meio de função. | BDII |
 | RF10 | Permitir o pagamento da locação por cartão ou Pix. | PII |
 | RF11 | Permitir colocar um carro em manutenção, retirando-o da lista de disponíveis, e liberá-lo novamente. | PII |
 | RF12 | Disponibilizar a lista de locações com cliente, carro, datas, valor e situação. | PII |
@@ -83,12 +82,12 @@ O funcionamento geral do sistema contempla:
 | RNF02 | O sistema deve disponibilizar uma interface acessível por navegador web. |
 | RNF03 | O banco de dados utilizado deve ser PostgreSQL. |
 | RNF04 | As consultas ao banco de dados devem utilizar comandos parametrizados. |
-| RNF05 | As senhas dos usuários devem ser armazenadas de forma protegida. |
+| RNF05 | | RNF05 | O acesso ao banco de dados deve ser controlado por perfis e privilégios. |
 | RNF06 | O código Java deve seguir padrões de organização, nomenclatura e legibilidade. |
 | RNF07 | As classes e métodos do projeto devem possuir documentação JavaDOC. |
 | RNF08 | O desenvolvimento deve utilizar Git e GitHub para versionamento. |
 | RNF09 | Os diagramas UML devem permanecer consistentes com o código-fonte e o banco de dados. |
-
+| RNF10 | O desenvolvimento deve utilizar GitHub Projects para organização das atividades. |
 
 ## 4. Tecnologias utilizadas
 
@@ -103,6 +102,11 @@ O funcionamento geral do sistema contempla:
 | DBeaver | Administração do banco de dados |
 | Eclipse | Ambiente de desenvolvimento |
 | UML | Modelagem do sistema |
+| Spring Boot 3 | Desenvolvimento da aplicação web |
+| Maven | Gerenciamento de dependências e execução do projeto |
+| JUnit 4 | Testes automatizados |
+| Bootstrap / JavaScript | Interface e funcionalidades do sistema |
+
 
 ## 5. Estrutura do repositório
 
@@ -113,14 +117,15 @@ NextDrive/
 ├── docs/
 │   ├── telas/
 │   ├── uml/
-│   │   ├── diagrama-de-atividades.md
-│   │   ├── diagrama-de-casos-de-uso.md
-│   │   ├── diagrama-de-classe.jpeg
-│   │   ├── diagrama-de-estados.md
-│   │   ├── diagrama-relacional.jpeg
-│   │   ├── diagrama-sequencia-devolucao-pagamento.jpeg
-│   │   ├── diagrama-sequencia-reserva.jpeg
-│   │   └── diagrama-sequencia-retirada.jpeg
+│   │   ├── casos-de-uso.png
+│   │   ├── classes.png
+│   │   ├── sequencia-aluguel.png
+│   │   ├── sequencia-devolucao-pagamento.png
+│   │   ├── atividades.png
+│   │   ├── estados-veiculo.png
+│   │   ├── estados-reserva.png
+│   │   ├── estados-locacao.png
+│   │   └── relacional.png
 │   ├── artigo.md
 │   ├── backup-restore.md
 │   ├── dicionario-de-dados.md
@@ -160,19 +165,21 @@ A estrutura contempla clientes, funcionários, veículos, categorias, lojas, res
 
 Os scripts estão disponíveis na pasta [`sql/`](sql/) e devem ser executados na ordem apresentada abaixo.
 
+
 | Ordem | Arquivo | Finalidade |
 |---|---|---|
-| 1 | `01_create_database.sql` | Criação do banco de dados (opcional; veja a seção 10.1). |
-| 2 | `02_create_tables.sql` | Criação das tabelas, extensão `pgcrypto`, chaves e restrições. |
-| 3 | `03_indices.sql` | Criação dos índices para otimização das consultas. |
-| 4 | `04_views.sql` | Criação de views e da função `fn_veiculos_disponiveis`. |
+| 1 | `01_create_database.sql` | Criação do banco (opcional). |
+| 2 | `02_create_tables.sql` | Criação das tabelas, chaves e restrições. |
+| 3 | `03_indices.sql` | Criação dos índices. |
+| 4 | `04_views.sql` | Criação das views. |
 | 5 | `05_dados_exemplo.sql` | Inserção de dados de exemplo. |
-| 6 | `06_consultas_relatorios.sql` | Consultas SQL para relatórios administrativos (R01 a R13). |
-| 7 | `07_roles_privilegios.sql` | Criação de grupos, usuários e privilégios de acesso. |
-| 8 | `08_gatilhos.sql` | Criação de triggers para validações e auditoria. |
-| 9 | `09_procedimentos.sql` | Criação de procedures e da função `fn_autenticar`. |
-| 10 | `10_backup_restauração.sh` | Rotinas de backup e restauração do banco de dados. |
-| 11 | `11_testes_regras.sql` | Execução de 34 verificações das regras de negócio. |
+| 6 | `06_consultas_relatorios.sql` | Consultas dos relatórios. |
+| 7 | `07_gatilhos.sql` | Criação dos triggers. |
+| 8 | `08_procedimentos.sql` | Criação da função e das procedures. |
+| 9 | `09_roles_privilegios.sql` | Criação de grupos, usuários e privilégios. |
+| 10 | `10_backup_restore.sh` | Rotinas de backup e restauração. |
+| 11 | `11_testes_regras.sql` | 13 verificações das regras de negócio. |
+
 
 ### 7.2 Recursos implementados no banco
 
@@ -182,7 +189,7 @@ O banco de dados utiliza os seguintes recursos:
 - **Visualizações:** disponibilizam dados organizados para consultas e relatórios.
 - **Gatilhos:** automatizam validações e auditorias.
 - **Procedures:** executam operações e regras de negócio.
-- **Funções:** permitem executar operações específicas, como consulta de disponibilidade e autenticação.
+- **Funções:** permitem executar operações específicas do sistema.
 - **Controle de acesso:** define usuários, grupos e privilégios.
 - **Backup e restauração:** permitem gerar cópias de segurança e recuperar os dados.
 - **Testes:** verificam o comportamento das regras implementadas.
@@ -209,23 +216,21 @@ Os diagramas UML documentam a estrutura, o comportamento e os principais process
 | Atividades | [Ver diagrama de atividades](docs/uml/diagrama-de-atividades.md) | [Seção 6.4](docs/artigo.md#64-atividades-rf22) |
 | Estados | [Ver diagramas de estados](docs/uml/diagrama-de-estados.md) | [Seção 6.5](docs/artigo.md#65-estados-rf23) |
 
+
 ## 9. Telas do sistema
 
-As capturas de tela apresentam as principais interfaces e funcionalidades desenvolvidas no sistema Next Drive.
+As capturas de tela apresentam as principais funcionalidades desenvolvidas no sistema Next Drive.
 
 Os arquivos de imagem estão organizados na pasta [`docs/telas/`](docs/telas/).
 
-As telas documentam as principais operações do sistema, incluindo:
+As telas documentam as seguintes operações:
 
-- Acesso e autenticação de usuários.
+- Login.
 - Cadastro e gerenciamento de clientes.
-- Gerenciamento de veículos e categorias.
-- Consulta de disponibilidade e reservas.
-- Retirada e devolução de veículos.
-- Registro de pagamentos e multas.
-- Consultas e relatórios administrativos.
+- Cadastro e gerenciamento de carros.
+- Aluguel de veículos.
+- Consulta de locações.
 
-As capturas também são utilizadas para ilustrar o funcionamento do sistema no artigo do projeto.
 
 ## 10. Como executar
 
@@ -247,42 +252,55 @@ As capturas também são utilizadas para ilustrar o funcionamento do sistema no 
 | 6 | `07_roles_privilegios.sql` |
 | 7 | `08_gatilhos.sql` |
 | 8 | `09_procedimentos.sql` |
-| 9 | `11_testes_regras.sql` (opcional: 34 verificações das regras; desfaz tudo no final) |
 
-**Atenção:** o script `01_create_database.sql` cria um banco com outro nome (`next_drive`) e apaga o banco se ele já existir, por isso não é usado neste passo a passo. O arquivo `10_backup_restauração.sh` é um script de terminal e deve ser executado separadamente, não pelo DBeaver. Mais detalhes em [`sql/README.md`](sql/README.md) e [`docs/backup-restore.md`](docs/backup-restore.md).
+### 10.1 Banco de dados
 
-**Usuários de exemplo** (senha `Senha@123`): cliente `ana.lima@example.com`, atendente `juliana.prado@nextdrive.example` e gerente `marcos.almeida@nextdrive.example`.
+**Requisitos:** PostgreSQL 16 ou superior e DBeaver.
+
+1. Instale e configure o PostgreSQL.
+2. Abra o DBeaver e conecte-se ao servidor PostgreSQL.
+3. Acesse a pasta `sql/` do repositório.
+4. Execute os scripts na seguinte ordem:
+
+| Ordem | Script |
+|---|---|
+| 1 | `02_create_tables.sql` |
+| 2 | `03_indices.sql` |
+| 3 | `04_views.sql` |
+| 4 | `05_dados_exemplo.sql` |
+| 5 | `07_gatilhos.sql` |
+| 6 | `08_procedimentos.sql` |
+| 7 | `09_roles_privilegios.sql` |
+| 8 | `06_consultas_relatorios.sql` (opcional) |
+| 9 | `11_testes_regras.sql` |
+
+**Atenção:** o script `01_create_database.sql` é opcional. O arquivo `10_backup_restore.sh` deve ser executado separadamente pelo terminal, e não pelo DBeaver.
+
+**Usuários de exemplo:** Login no site: `admin` / `1234`. Usuários do banco: `atendente_nextdrive` e `gerente_nextdrive`.
+
 
 ### 10.2 Aplicação Java
 
-**Requisitos:** JDK 17 ou superior e Maven 3.8 ou superior.
+**Requisitos:** JDK 17 e Eclipse ou Maven.
 
-1. Acesse a pasta `java/` do repositório.
-2. Configure a conexão com o PostgreSQL conforme as instruções do arquivo [`java/README.md`](java/README.md).
-3. Abra o terminal dentro da pasta `java/`.
-4. Execute o comando para compilar e iniciar a aplicação:
+1. Instale o JDK 17 e o Eclipse (ou o Maven).
+2. Importe a pasta `java/` como **Existing Maven Project** no Eclipse.
+3. Abra o arquivo `SingleConnection.java` e confira a senha de conexão com o PostgreSQL.
+4. Execute a classe `Application` ou, pelo terminal dentro da pasta `java/`, execute:
 
 ```bash
-mvn compile exec:java
+mvn spring-boot:run
 ```
 
-5. Após iniciar o servidor, acesse pelo navegador:
+5. Abra o endereço no navegador:
 
 http://localhost:8080
 
-**Gerar o arquivo JAR:**
+6. Entre no sistema utilizando:
 
-```bash
-mvn package
-```
+**Usuário:** `admin`
 
-**Executar o JAR:**
-
-```bash
-java -jar target/nextdrive-jar-with-dependencies.jar
-```
-
-Para mais informações sobre configuração e utilização, consulte `java/README.md`.
+**Senha:** `1234`
 
 ## 11. Organização do desenvolvimento
 
@@ -303,14 +321,16 @@ O versionamento permitiu registrar as alterações realizadas, integrar as contr
 **Repositório do projeto:**  
 https://github.com/lucasorlandi7/NextDrive
 
+
 ## 12. Desenvolvedores
 
 | Integrante | Responsabilidades principais |
 |---|---|
 | Lucas Orlandi | Reservas e controle de locações |
-| Samuel Gralow | Pagamentos, multas, relatórios e documentação |
-| Diogo Rodrigo Nielsson | Veículos, lojas e manutenção |
-| Felipe Kremer | Clientes, funcionários e autenticação |
+| Samuel Gralow | Pagamentos, banco de dados e documentação |
+| Diogo Rodrigo Nielsson | Cadastro e gerenciamento de carros |
+| Felipe Kremer | Cadastro e gerenciamento de clientes |
+
 
 ## 13. Considerações finais
 
