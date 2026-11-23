@@ -9,7 +9,7 @@ Ciência da Computação — UNOESC
 
 **Autores:** Lucas Orlandi, Samuel Gralow, Diogo Rodrigo Nielsson e Felipe Kremer.
 
-**Professores:** Otilia, Fran e Roberson.
+**Professores:** Otilia Barbosa, Franciele Petry e Roberson Alves.
 
 ---
 
@@ -52,30 +52,28 @@ O funcionamento geral do sistema contempla:
 
 | Código | Descrição | Componente |
 |---|---|---|
-| RF01 | Criar índices para os campos de placa dos veículos, CPF/CNPJ dos clientes e datas das reservas. | BDII |
-| RF02 | Permitir autenticação de usuários por e-mail e senha. | PII |
-| RF03 | Permitir que o gerente cadastre, consulte, altere e desative funcionários. | PII |
-| RF04 | Permitir o gerenciamento de clientes pessoa física e jurídica, incluindo cadastro próprio pelo cliente. | PII |
-| RF05 | Permitir o cadastro e gerenciamento de veículos, categorias e lojas. | PII |
-| RF06 | Disponibilizar consulta de veículos por categoria, loja e período. | BDII |
-| RF07 | Permitir a realização de reservas pelo cliente no sistema e pelo atendente no balcão. | PII |
-| RF08 | Permitir o cancelamento de reservas com justificativa, por meio de procedure. | BDII |
-| RF09 | Permitir o registro da retirada do veículo, incluindo quilometragem, combustível e caução. | PII |
-| RF10 | Registrar a devolução e calcular o valor final da locação por meio de procedure. | BDII |
-| RF11 | Permitir o registro manual de pagamentos, informando valor, data e forma de pagamento (crédito, débito ou PIX). | PII |
-| RF12 | Permitir o gerenciamento das manutenções dos veículos. | PII |
-| RF13 | Disponibilizar o histórico de locações dos clientes. | PII |
-| RF14 | Disponibilizar relatórios administrativos por meio de views. | BDII |
-| RF15 | Impedir locações conflitantes para o mesmo veículo e atualizar seu status automaticamente por meio de trigger. | BDII |
-| RF16 | Impedir locações quando o condutor for menor de 21 anos ou possuir CNH emitida há menos de 2 anos, por meio de trigger. | BDII |
-| RF17 | Registrar auditoria das alterações realizadas em pagamentos e preços por meio de trigger. | BDII |
-| RF18 | Controlar o acesso ao banco de dados por perfis, usuários e privilégios, além de permitir backup e restauração. | BDII |
-| RF19 | Elaborar o diagrama de casos de uso com os atores Cliente, Atendente e Gerente. | ESI |
-| RF20 | Elaborar o diagrama de classes, contemplando a herança de Pessoa e as classes relacionadas a pagamentos. | ESI |
-| RF21 | Elaborar diagramas de sequência para os processos de reserva, retirada e devolução. | ESI |
-| RF22 | Elaborar o diagrama de atividades do processo de locação. | ESI |
-| RF23 | Elaborar diagramas de estados para Reserva, Veículo e Locação. | ESI |
-| RF24 | Permitir o registro de multas de trânsito vinculadas às locações. | PII |
+| RF01 | Criar índices para a placa dos veículos, o CPF dos clientes e as datas das reservas. | BDII |
+| RF02 | Permitir o acesso ao sistema por meio de usuário e senha. | PII |
+| RF03 | Permitir cadastrar, consultar e excluir clientes pessoa física, informando nome, CPF, e-mail, CNH e validade da CNH. | PII |
+| RF04 | Permitir cadastrar, consultar e excluir carros, vinculados a uma categoria. | PII |
+| RF05 | Disponibilizar a consulta de carros disponíveis por meio de view. | BDII |
+| RF06 | Permitir alugar um carro disponível, escolhendo o carro, o cliente e as datas de retirada e devolução. | PII |
+| RF07 | Permitir o cancelamento de reservas com justificativa, por meio de procedure. | BDII |
+| RF08 | Permitir a devolução do carro, informando a quilometragem. | PII |
+| RF09 | Calcular o valor final da locação (diárias mais multa por atraso) por meio de procedure. | BDII |
+| RF10 | Permitir o pagamento da locação por cartão ou Pix. | PII |
+| RF11 | Permitir colocar um carro em manutenção, retirando-o da lista de disponíveis, e liberá-lo novamente. | PII |
+| RF12 | Disponibilizar a lista de locações com cliente, carro, datas, valor e situação. | PII |
+| RF13 | Disponibilizar relatórios administrativos por meio de views. | BDII |
+| RF14 | Impedir locação de carro indisponível ou já alugado e liberar o carro ao encerrar a locação, por meio de trigger. | BDII |
+| RF15 | Impedir reservas para cliente com CNH vencida antes da devolução, por meio de trigger. | BDII |
+| RF16 | Registrar auditoria das alterações realizadas em pagamentos, por meio de trigger. | BDII |
+| RF17 | Controlar o acesso ao banco por perfis, usuários e privilégios, além de permitir backup e restauração. | BDII |
+| RF18 | Elaborar o diagrama de casos de uso, com o ator Administrador. | ESI |
+| RF19 | Elaborar o diagrama de classes, contemplando a herança das classes de pagamento. | ESI |
+| RF20 | Elaborar diagramas de sequência para o aluguel e para a devolução com pagamento. | ESI |
+| RF21 | Elaborar o diagrama de atividades do processo de locação. | ESI |
+| RF22 | Elaborar diagramas de estados para Reserva, Veículo e Locação. | ESI |
 
 ### 3.2 Requisitos Não Funcionais
 
@@ -88,7 +86,7 @@ O funcionamento geral do sistema contempla:
 | RNF05 | As senhas dos usuários devem ser armazenadas de forma protegida. |
 | RNF06 | O código Java deve seguir padrões de organização, nomenclatura e legibilidade. |
 | RNF07 | As classes e métodos do projeto devem possuir documentação JavaDOC. |
-| RNF08 | O desenvolvimento deve utilizar Git e GitHub para versionamento e GitHub Projects para organização das sprints. |
+| RNF08 | O desenvolvimento deve utilizar Git e GitHub para versionamento. |
 | RNF09 | Os diagramas UML devem permanecer consistentes com o código-fonte e o banco de dados. |
 
 
