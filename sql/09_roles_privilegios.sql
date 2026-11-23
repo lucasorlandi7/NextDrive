@@ -31,3 +31,8 @@ GRANT UPDATE ON veiculo TO grupo_atendente;
 GRANT SELECT, INSERT, UPDATE, DELETE ON categoria, cliente, veiculo, reserva TO grupo_gerente;
 GRANT SELECT, INSERT, UPDATE ON locacao, pagamento TO grupo_gerente;
 GRANT SELECT ON auditoria_pagamento TO grupo_gerente;
+
+-- Views dos relatórios: o atendente vê os carros disponíveis e as locações abertas;
+-- o faturamento fica só para o gerente.
+GRANT SELECT ON vw_veiculos_disponiveis, vw_locacoes_abertas TO grupo_atendente;
+GRANT SELECT ON vw_veiculos_disponiveis, vw_locacoes_abertas, vw_faturamento_categoria TO grupo_gerente;
