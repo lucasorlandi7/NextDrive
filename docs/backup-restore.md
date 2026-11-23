@@ -1,93 +1,141 @@
 # Política e Configuração de Backup e Restauração — Next Drive
 
-Rotina implementada em `sql/10_backup_restauração.sh` (RF18), testada com backup completo e restauração em um banco novo.
+A rotina está no script [`sql/10_backup_restore.sh`](../sql/10_backup_restore.sh). Ele usa as ferramentas que já vêm com o PostgreSQL: `pg_dump` para gerar o backup e `pg_restore` para restaurar.
 
 ## Política
 
 | Item | Definição |
 |---|---|
-| **O que é copiado** | Banco `next_drive` completo (tabelas, dados, views, índices, triggers, procedures e privilégios) e, separadamente, os usuários/grupos do servidor (roles). |
-| **Frequência** | Backup completo **diário** (de madrugada, fora do horário de balcão). Backup de roles **semanal** e sempre que um perfil mudar. |
-| **Formato** | `pg_dump -Fc` (custom): comprimido, e permite restaurar só algumas tabelas. |
-| **Retenção** | 7 dias no disco (o script apaga os mais antigos). Recomenda-se uma cópia semanal fora da máquina do banco. |
-| **Verificação** | Todo backup é conferido com `pg_restore --list` logo após ser gerado. |
-| **Teste de restauração** | **Mensal**: restaurar o backup mais recente em um banco `next_drive_restore` e comparar contagens. |
-| **Segurança** | Senha via `PGPASSWORD` ou `~/.pgpass`; nunca dentro do script. Arquivos de backup com acesso restrito ao administrador. |
-| **Perda máxima aceita (RPO)** | Até 24 horas (backup diário). Para menos, habilitar arquivamento de WAL (melhoria futura). |
+| **O que é copiado** | O banco `nextdrive` inteiro: tabelas, dados, índices, views, triggers, procedures e permissões dos grupos. |
+| **Formato** | `pg_dump -Fc` (formato *custom*): o arquivo sai comprimido e permite restaurar só algumas tabelas, se for preciso. |
+| **Nome do arquivo** | `backups/nextdrive_AAAAMMDD_HHMMSS.backup` (data e hora em que foi gerado). |
+| **Frequência** | Um backup **por dia**, de madrugada, fora do horário de atendimento. |
+| **Retenção** | Manter os backups dos **últimos 7 dias** e uma cópia por semana fora do computador do banco (pendrive ou nuvem). O script não apaga arquivos antigos; a limpeza é manual. |
+| **Restauração** | Sempre em um banco **separado**, o `nextdrive_restaurado`, para nunca sobrescrever o banco em uso por engano. |
+| **Teste** | Uma vez por mês, restaurar o backup mais recente e conferir as contagens (veja "Como conferir"). |
+| **Senha** | Nunca fica escrita no script. É informada antes, pela variável `PGPASSWORD`. |
+| **Usuários do servidor** | O `pg_dump` não copia os usuários (`atendente_nextdrive`, `gerente_nextdrive`). Em um servidor novo, rode o `09_roles_privilegios.sql` depois de restaurar. |
 
-## Uso do script (Linux, macOS ou Git Bash)
+## Configuração do script
+
+No começo do script ficam as configurações:
 
 ```bash
-# backup completo -> backups/next_drive_AAAAMMDD_HHMMSS.dump
-./sql/10_backup_restauração.sh backup
-
-# usuários e grupos do servidor -> backups/roles_AAAAMMDD_HHMMSS.sql
-./sql/10_backup_restauração.sh globais
-
-# conferir se um backup está íntegro
-./sql/10_backup_restauração.sh verificar backups/next_drive_20261109_231945.dump
-
-# restaurar em um banco NOVO (padrão: next_drive_restore)
-./sql/10_backup_restauração.sh restore backups/next_drive_20261109_231945.dump
-
-# listar backups
-./sql/10_backup_restauração.sh listar
+BANCO=nextdrive                  # banco que vai para o backup
+RESTAURADO=nextdrive_restaurado  # banco criado na restauração
+USUARIO=postgres
+HOST=localhost
+PORTA=${PORTA:-5432}             # pode ser trocada sem editar o script: PORTA=5433
+PASTA=./backups                  # pasta onde os arquivos são salvos
 ```
 
-Variáveis opcionais: `DB_NAME` (padrão `next_drive`), `DB_USER` (`postgres`), `DB_HOST` (`localhost`),
-`DB_PORT` (`5432`), `BACKUP_DIR` (`./backups`) e `RETENCAO_DIAS` (`7`). Se o seu banco tem outro nome:
-`DB_NAME=nextdrive ./sql/10_backup_restauração.sh backup`.
+Se o seu PostgreSQL usa outro usuário, host ou porta, ajuste essas linhas.
 
-### Agendamento diário (cron)
+## Linux, macOS ou Git Bash (Windows)
 
-```cron
-0 2 * * *  cd /caminho/do/projeto && PGPASSWORD=... DB_USER=postgres ./sql/10_backup_restauração.sh backup >> backups/backup.log 2>&1
+Abra o terminal **na pasta `sql`** do projeto e informe a senha do PostgreSQL:
+
+```bash
+cd sql
+export PGPASSWORD=sua_senha
 ```
 
-## Backup e restauração no Windows
+No **Git Bash do Windows**, coloque antes as ferramentas do PostgreSQL no caminho (troque o 16 pela sua versão):
 
-**Pelo DBeaver:** clique com o botão direito no banco → **Ferramentas** → **Backup** (escolha formato *Custom*) → informe a pasta
-de saída. Para restaurar: botão direito em um banco **novo e vazio** → **Ferramentas** → **Restaurar**.
+```bash
+export PATH="/c/Program Files/PostgreSQL/16/bin:$PATH"
+```
 
-**Pela linha de comando (cmd ou PowerShell):**
+**Fazer o backup:**
+
+```bash
+bash 10_backup_restore.sh backup
+```
+
+Resposta esperada: `Backup salvo em ./backups/nextdrive_20261123_194551.backup`
+
+**Restaurar** (cria o banco `nextdrive_restaurado`; se ele já existir, é apagado e criado de novo):
+
+```bash
+bash 10_backup_restore.sh restaurar backups/nextdrive_20261123_194551.backup
+```
+
+Resposta esperada: `Banco nextdrive_restaurado restaurado a partir de backups/nextdrive_20261123_194551.backup`
+
+Use o nome do arquivo que o seu backup gerou. Rodar o script sem nada mostra como usar.
+
+## Windows sem Git Bash
+
+### Pelo DBeaver
+
+1. **Backup:** botão direito no banco `nextdrive` → **Ferramentas** → **Backup**. Marque o esquema `public`, escolha o formato **Custom**, a pasta de saída e clique em **Iniciar**.
+2. **Restaurar:** crie um banco novo e vazio chamado `nextdrive_restaurado`. Botão direito nele → **Ferramentas** → **Restaurar**, escolha o formato **Custom**, selecione o arquivo de backup e clique em **Iniciar**.
+
+### Pelo Prompt de Comando (cmd)
 
 ```bat
+set PGPASSWORD=sua_senha
+cd "C:\Program Files\PostgreSQL\16\bin"
+
 :: backup
-"C:\Program Files\PostgreSQL\16\bin\pg_dump.exe" -h localhost -U postgres -Fc -f C:\backups\next_drive.dump next_drive
+pg_dump -h localhost -p 5432 -U postgres -Fc -f C:\backups\nextdrive.backup nextdrive
 
-:: usuários e grupos
-"C:\Program Files\PostgreSQL\16\bin\pg_dumpall.exe" -h localhost -U postgres --roles-only -f C:\backups\roles.sql
-
-:: restauração em banco novo
-"C:\Program Files\PostgreSQL\16\bin\createdb.exe" -h localhost -U postgres next_drive_restore
-"C:\Program Files\PostgreSQL\16\bin\pg_restore.exe" -h localhost -U postgres -d next_drive_restore C:\backups\next_drive.dump
+:: restauração em um banco novo
+createdb -h localhost -p 5432 -U postgres nextdrive_restaurado
+pg_restore -h localhost -p 5432 -U postgres -d nextdrive_restaurado C:\backups\nextdrive.backup
 ```
 
-Para automatizar no Windows, use o **Agendador de Tarefas** executando o comando de backup todos os dias.
+A pasta `C:\backups` precisa existir antes do backup.
 
-## Restauração seletiva (uma ou poucas tabelas)
+## Agendamento automático
 
-O formato custom permite recuperar, por exemplo, só os pagamentos apagados por engano, sem mexer no resto:
+- **Linux:** uma linha no `crontab -e` faz o backup todo dia às 2h:
+  ```
+  0 2 * * *  cd /caminho/do/NextDrive/sql && PGPASSWORD=sua_senha bash 10_backup_restore.sh backup >> backups/backup.log 2>&1
+  ```
+- **Windows:** no **Agendador de Tarefas**, crie uma tarefa diária que execute o comando `pg_dump` acima.
+
+## Se o banco principal for perdido
+
+1. Instale o PostgreSQL e crie o banco vazio: `createdb -U postgres nextdrive`.
+2. Restaure o backup mais recente direto nele: `pg_restore -U postgres -d nextdrive backups/nextdrive_AAAAMMDD_HHMMSS.backup`. Se o servidor for novo, podem aparecer avisos de que `grupo_atendente` e `grupo_gerente` não existem; os dados são restaurados mesmo assim.
+3. Conectado no `nextdrive`, rode o `09_roles_privilegios.sql` para recriar os usuários e as permissões.
+4. Confira as contagens abaixo e só então volte a usar o sistema.
+
+## Restaurar só uma tabela
+
+O formato custom permite recuperar, por exemplo, só os pagamentos, sem mexer no resto:
 
 ```bash
-pg_restore -h localhost -U postgres -d next_drive_restore -t pagamento -t pagamento_cartao -t pagamento_pix arquivo.dump
+pg_restore -U postgres -d nextdrive_restaurado -t pagamento backups/nextdrive_AAAAMMDD_HHMMSS.backup
 ```
 
-## Procedimento de recuperação de desastre
+## Como conferir
 
-1. Reinstalar o PostgreSQL e restaurar os usuários: `psql -U postgres -f backups/roles_AAAAMMDD_HHMMSS.sql`.
-2. Restaurar o banco: `./sql/10_backup_restauração.sh restore backups/next_drive_AAAAMMDD_HHMMSS.dump next_drive`.
-3. Conferir: número de tabelas (17), contagem de locações e pagamentos, e os 8 triggers (`SELECT count(*) FROM pg_trigger WHERE NOT tgisinternal;`).
-4. Apontar a aplicação para o banco restaurado.
+Rode a consulta abaixo no banco original e no restaurado. Os números devem ser iguais:
+
+```sql
+SELECT (SELECT COUNT(*) FROM cliente)   AS clientes,
+       (SELECT COUNT(*) FROM veiculo)   AS veiculos,
+       (SELECT COUNT(*) FROM reserva)   AS reservas,
+       (SELECT COUNT(*) FROM locacao)   AS locacoes,
+       (SELECT COUNT(*) FROM pagamento) AS pagamentos,
+       (SELECT COUNT(*) FROM pg_trigger WHERE NOT tgisinternal) AS triggers;
+```
 
 ## Resultado do teste realizado
 
-| Conferência | Banco original | Banco restaurado |
-|---|---|---|
-| Tabelas | 17 | 17 |
-| Locações | 6 | 6 |
-| Pagamentos | 5 | 5 |
-| Veículos | 10 | 10 |
-| Triggers | 8 | 8 |
+Teste feito com os dados de exemplo: backup do banco `nextdrive` e restauração no `nextdrive_restaurado`.
 
-O script também recusa restaurar sobre um banco que já existe, evitando sobrescrever dados por engano.
+| Conferência | Banco original | Banco restaurado |
+|---|:---:|:---:|
+| Clientes | 3 | 3 |
+| Veículos | 5 | 5 |
+| Reservas | 5 | 5 |
+| Locações | 3 | 3 |
+| Pagamentos | 2 | 2 |
+| Triggers | 4 | 4 |
+| Views | 3 | 3 |
+| Funções e procedures | 7 | 7 |
+
+As permissões também voltaram: o usuário `gerente_nextdrive` conseguiu consultar a view de faturamento no banco restaurado.
