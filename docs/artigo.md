@@ -891,56 +891,30 @@ esac
 
 ## 6 Modelagem UML
 
-Os diagramas de classes, sequência e atividades são imagens, guardadas na pasta [`uml/`](uml/); os de casos de uso e de estados foram escritos em Mermaid, que o GitHub desenha diretamente. Cada diagrama cita os requisitos atendidos e, quando aplicável, a classe, a *procedure* ou o *trigger* que implementa cada passo, o que mantém a modelagem consistente com o código e o banco (RNF09).
+Todos os diagramas são imagens, guardadas na pasta [`uml/`](uml/). Cada diagrama cita os requisitos atendidos e, quando aplicável, a classe, a *procedure* ou o *trigger* que implementa cada passo, o que mantém a modelagem consistente com o código e o banco (RNF09).
 
 ### 6.1 Casos de uso (RF18)
 
-Ator: **Administrador**, o funcionário da locadora que usa a aplicação. Todos os casos de uso abaixo fazem parte do sistema Next Drive. Os casos de uso derivam dos requisitos funcionais e do processo de negócio da seção 2.
+Ator: **Administrador**, o funcionário da locadora que usa a aplicação. Todos os casos de uso fazem parte do sistema Next Drive e derivam dos requisitos funcionais e do processo de negócio da seção 2.
 
-```mermaid
-flowchart LR
-    Admin(["Administrador"])
+![Diagrama de casos de uso](uml/casos-de-uso.jpg)
 
-    UC01(["UC01 Fazer login"])
-    UC02(["UC02 Gerenciar clientes"])
-    UC03(["UC03 Gerenciar carros"])
-    UC04(["UC04 Enviar carro para manutenção"])
-    UC05(["UC05 Alugar carro"])
-    UC06(["UC06 Consultar locações"])
-    UC07(["UC07 Devolver carro e pagar"])
-    UC08(["UC08 Conferir disponibilidade e CNH"])
-    UC09(["UC09 Calcular valor final"])
-    UC10(["UC10 Registrar pagamento"])
-
-    Admin --- UC01
-    Admin --- UC02
-    Admin --- UC03
-    Admin --- UC04
-    Admin --- UC05
-    Admin --- UC06
-    Admin --- UC07
-
-    UC05 -.->|include| UC08
-    UC07 -.->|include| UC09
-    UC07 -.->|include| UC10
-```
+*Figura — Diagrama de casos de uso do Next Drive. As setas tracejadas `<<include>>` indicam que o caso de uso base sempre usa o outro; as setas com triângulo indicam generalização (pagar com cartão e pagar com Pix são formas de efetuar o pagamento).*
 
 #### Descrição dos casos de uso
 
-| Código | Caso de uso | Requisitos | Descrição |
-|---|---|---|---|
-| UC01 | Fazer login | RF02 | Entra no sistema com usuário e senha. |
-| UC02 | Gerenciar clientes | RF03 | Cadastra, consulta e exclui clientes, com CPF, e-mail e CNH. |
-| UC03 | Gerenciar carros | RF04 | Cadastra, consulta e exclui carros, cada um de uma categoria. |
-| UC04 | Enviar carro para manutenção | RF11 | Tira o carro da lista de disponíveis e, depois, libera de novo. Carro locado não pode ir para manutenção. |
-| UC05 | Alugar carro | RF06, RF14, RF15 | Escolhe o carro, o cliente e as datas; o sistema registra a reserva e a locação e mostra a estimativa de valor. |
-| UC06 | Consultar locações | RF12 | Lista as locações com cliente, carro, datas, valor e situação. |
-| UC07 | Devolver carro e pagar | RF08, RF10 | Informa a data e a quilometragem de chegada e a forma de pagamento. |
-| UC08 | Conferir disponibilidade e CNH | RF05, RF14, RF15 | O carro precisa estar disponível e a CNH do cliente válida até a devolução. |
-| UC09 | Calcular valor final | RF09 | Diárias usadas (mínimo 1) mais 30% da diária por dia de atraso. |
-| UC10 | Registrar pagamento | RF10, RF16 | Grava o pagamento por cartão ou Pix; o banco audita a operação e marca a locação como paga. |
-
-**Relações:** `include` = o caso de uso base sempre usa o outro.
+| Caso de uso | Requisitos | Descrição |
+|---|---|---|
+| Fazer login / Sair do sistema | RF02 | Entra no sistema com usuário e senha e sai pelo botão "Sair". |
+| Cadastrar, listar e excluir cliente | RF03 | Cadastro com nome, CPF, e-mail, CNH e validade da CNH; cliente com locação não pode ser excluído. |
+| Cadastrar, listar e excluir carro | RF04 | Cada carro pertence a uma categoria, que define a diária; carro com locação não pode ser excluído. |
+| Colocar carro em manutenção / Liberar carro da manutenção | RF11 | Tira o carro da lista de disponíveis e depois libera de novo. Carro locado não pode ir para manutenção. |
+| Alugar carro | RF05, RF06, RF14 | Escolhe o carro, o cliente e as datas; o sistema registra a reserva e a locação e mostra a estimativa de valor. |
+| Validar CNH do cliente (`<<include>>`) | RF15 | A CNH precisa estar válida até a data de devolução (`LocacaoController` e trigger `trg_validar_cnh`). |
+| Devolver carro | RF08 | Informa a data e a quilometragem de chegada e a forma de pagamento. |
+| Calcular valor final (`<<include>>`) | RF09 | Diárias usadas (mínimo 1) mais 30% da diária por dia de atraso. |
+| Efetuar pagamento (`<<include>>`), pagar com cartão ou com Pix | RF10, RF16 | Grava o pagamento com a bandeira do cartão ou o código da transação Pix; o banco audita a operação e marca a locação como paga. |
+| Consultar locações | RF12 | Lista as locações com cliente, carro, datas, valor, pagamento e situação. |
 
 O cancelamento de reserva (RF07) e os relatórios (RF13) não têm tela: são feitos direto no banco, pela *procedure* `sp_cancelar_reserva` e pelas consultas da seção 5.5.
 
@@ -1029,62 +1003,40 @@ Pela tela, a devolução já registra o pagamento do valor total, então a loca�
 
 ### 6.5 Estados (RF22)
 
-Cada transição indica o evento que a provoca e, entre parênteses, a classe, a *procedure* ou o *trigger* responsável. Os estados são exatamente os valores das colunas `status` do banco e das enumerações do Java.
+Cada transição indica o evento que a provoca. Os estados são exatamente os valores das colunas `status` do banco e das enumerações do Java.
 
 #### Reserva (`reserva.status`)
 
-```mermaid
-stateDiagram-v2
-    [*] --> EFETIVADA : aluguel pela tela Alugar (LocacaoDAO.alugar)
-    [*] --> ATIVA : reserva antecipada registrada no banco
-    ATIVA --> CANCELADA : cancelamento com justificativa (sp_cancelar_reserva)
-    CANCELADA --> [*]
-    EFETIVADA --> [*]
+![Diagrama de estados da reserva](uml/estados-reserva.jpeg)
 
-    note right of CANCELADA
-        A justificativa é obrigatória (RF07).
-    end note
-```
+*Figura — Estados da reserva. A reserva antecipada nasce ATIVA (o gatilho `trg_validar_cnh` confere a CNH) e termina CANCELADA, com justificativa obrigatória (`sp_cancelar_reserva`), ou EFETIVADA, quando gera a locação. Pela tela Alugar, a reserva já é gravada como EFETIVADA junto com a locação (`LocacaoDAO.alugar`).*
 
 #### Veículo (`veiculo.status`)
 
-```mermaid
-stateDiagram-v2
-    [*] --> DISPONIVEL : carro cadastrado
-    DISPONIVEL --> LOCADO : aluguel (LocacaoDAO.alugar)
-    LOCADO --> DISPONIVEL : devolução (trg_liberar_veiculo)
-    DISPONIVEL --> MANUTENCAO : enviado para manutenção (VeiculoController)
-    MANUTENCAO --> DISPONIVEL : liberado da manutenção (VeiculoController)
-    DISPONIVEL --> [*] : carro excluído (só se nunca foi alugado)
+![Diagrama de estados do veículo](uml/estados-veiculo.jpeg)
 
-    note right of LOCADO
-        Não pode ser alugado de novo (trg_validar_locacao)
-        nem ir para manutenção (VeiculoController).
-    end note
-```
+*Figura — Estados do veículo. O aluguel muda o carro para LOCADO e a devolução o libera (`trg_liberar_veiculo`). Só o carro disponível vai para manutenção; o carro locado não pode ser alugado de novo (`trg_validar_locacao`) nem ir para manutenção (`VeiculoController`). A exclusão só é aceita se o carro não tiver locações.*
 
 #### Locação (`locacao.status`)
 
-```mermaid
-stateDiagram-v2
-    [*] --> ABERTA : aluguel registrado
-    ABERTA --> ENCERRADA : devolução com cálculo do valor (Locacao.encerrar, sp_devolver_veiculo)
-    ENCERRADA --> ENCERRADA : pagamento parcial
-    ENCERRADA --> PAGA : total pago cobre o valor final (PagamentoDAO)
-    PAGA --> [*]
-```
+![Diagrama de estados da locação](uml/estados-loca%C3%A7%C3%A3o.jpeg)
+
+*Figura — Estados da locação. A devolução calcula o valor final (`Locacao.encerrar`) e encerra a locação; ela fica ENCERRADA enquanto o total pago for menor que o valor final e passa para PAGA quando o pagamento cobre o valor (`PagamentoDAO`).*
 
 #### Resumo das transições permitidas
 
 | Entidade | De | Para | Evento |
 |---|---|---|---|
+| Reserva | — | ATIVA | Reserva antecipada registrada no banco |
 | Reserva | — | EFETIVADA | Aluguel feito pela tela |
 | Reserva | ATIVA | CANCELADA | Cancelamento com justificativa |
+| Reserva | ATIVA | EFETIVADA | Aluguel que gera a locação |
 | Veículo | DISPONIVEL | LOCADO | Aluguel |
 | Veículo | LOCADO | DISPONIVEL | Devolução |
 | Veículo | DISPONIVEL | MANUTENCAO | Envio para manutenção |
 | Veículo | MANUTENCAO | DISPONIVEL | Liberação da manutenção |
 | Locação | ABERTA | ENCERRADA | Devolução |
+| Locação | ENCERRADA | ENCERRADA | Pagamento parcial |
 | Locação | ENCERRADA | PAGA | Pagamento do valor final |
 
 ---
