@@ -3,13 +3,14 @@
 **Trabalho Final Integrado de Programação II, Engenharia de Software I e Banco de Dados II** — Ciência da Computação, Universidade do Oeste de Santa Catarina (Unoesc), 4º semestre, 2026/02.
 
 **Autores:** Lucas Orlandi, Samuel Gralow, Diogo Rodrigo Nielsson, Felipe Kremer  
-**Professores:** Otilia, Fran, Roberson  
+**Professores:** Otilia Barbosa, Franciele Petry e Roberson Alves  
 **Repositório:** <https://github.com/lucasorlandi7/NextDrive>
+
 ---
 
 ## Resumo
 
-Este trabalho apresenta o **Next Drive**, um sistema web para uma locadora de veículos com várias lojas, que cobre o processo completo de locação: reserva, retirada, devolução, pagamento e pós-locação (multas de trânsito e liberação da cautela). O sistema foi desenvolvido em Java, sem frameworks, sobre um banco de dados PostgreSQL. O banco concentra as regras de negócio críticas (conflito de locações, idade e habilitação do condutor, imutabilidade de locações finalizadas, auditoria) em *triggers* e *procedures*, e o acesso é separado por perfis de usuário (gerente, atendente, auditor e site). A modelagem seguiu UML (casos de uso, classes, sequência, atividades e estados) e o modelo relacional foi normalizado até a terceira forma normal. O planejamento foi feito em sprints, com versionamento no GitHub. O resultado é um sistema funcional, verificado por 34 testes de regras no banco e por testes de fluxo ponta a ponta na aplicação web.
+Este trabalho apresenta o **Next Drive**, um sistema web para uma locadora de veículos que cobre o processo de locação: cadastro de clientes e carros, aluguel, devolução com cálculo do valor (incluindo multa por atraso) e pagamento por cartão ou Pix. A aplicação foi desenvolvida em Java 17 com Spring Boot e JDBC, sobre um banco de dados PostgreSQL 16. O banco tem 7 tabelas normalizadas até a terceira forma normal e concentra as regras críticas em *triggers* e *procedures*: impedir o aluguel de um carro indisponível, bloquear clientes com CNH vencida, devolver o carro à frota na devolução e auditar os pagamentos. O acesso ao banco é separado em dois perfis, atendente e gerente, e há uma rotina de backup e restauração testada. A modelagem seguiu UML (casos de uso, classes, sequência, atividades e estados), e o código foi versionado no GitHub. O resultado é um sistema funcional, com 13 testes das regras no banco e 9 testes automatizados das classes Java.
 
 **Palavras-chave:** locação de veículos; PostgreSQL; Java; UML; banco de dados.
 
@@ -34,17 +35,17 @@ Este trabalho apresenta o **Next Drive**, um sistema web para uma locadora de ve
 
 ## 1 Introdução
 
-Locadoras de veículos lidam com um processo em que erros custam caro: um carro entregue para dois clientes no mesmo período, um contrato alterado depois de fechado, um pagamento registrado sem rastro. Em sistemas pequenos, essas regras costumam ficar espalhadas pelas telas, e basta uma tela esquecer de validar para o dado errado entrar.
+Locadoras de veículos lidam com um processo em que erros custam caro: um carro entregue para dois clientes ao mesmo tempo, um aluguel feito para alguém com a CNH vencida, um pagamento alterado sem deixar rastro. Em sistemas pequenos, essas regras costumam ficar espalhadas pelas telas, e basta uma tela esquecer de validar para o dado errado entrar.
 
-O objetivo deste trabalho é construir o **Next Drive**, sistema de gestão de uma locadora com várias lojas, em que cliente, atendente e gerente usam o mesmo sistema com permissões diferentes. O trabalho é integrado e atende três disciplinas ao mesmo tempo:
+O objetivo deste trabalho é construir o **Next Drive**, um sistema simples de gestão de uma locadora, usado pelos funcionários para cadastrar clientes e carros, registrar aluguéis, devoluções e pagamentos. O trabalho é integrado e atende três disciplinas ao mesmo tempo:
 
 | Disciplina | O que o trabalho entrega |
 |---|---|
 | **Banco de Dados II** | Modelo relacional normalizado, scripts com índices e *constraints*, *views*, relatórios com junções, *triggers*, *procedures*, políticas de acesso, backup e restauração. |
-| **Engenharia de Software I** | Levantamento de requisitos, diagramas UML (casos de uso, classes, sequência, atividades e estados), planejamento em sprints e uso de Git/GitHub. |
-| **Programação II** | Aplicação web em Java com orientação a objetos (herança, polimorfismo, classes abstratas, enumerações), JDBC, JavaDoc e funcionalidade extra. |
+| **Engenharia de Software I** | Levantamento de requisitos, diagramas UML (casos de uso, classes, sequência, atividades e estados), planejamento das atividades e uso de Git/GitHub. |
+| **Programação II** | Aplicação web em Java com orientação a objetos (encapsulamento, herança, polimorfismo, classe abstrata e enumerações), persistência com JDBC e JavaDoc. |
 
-A decisão de projeto que organiza todo o trabalho é **colocar as regras de negócio no banco**. A aplicação Java valida o que ajuda o usuário (mensagens claras, campos obrigatórios), mas a garantia final é do PostgreSQL. Assim, qualquer caminho de acesso (a aplicação, um script, outro sistema no futuro) respeita as mesmas regras.
+A decisão de projeto que organiza o trabalho é **garantir as regras principais no banco**. A aplicação Java valida o que ajuda o usuário (mensagens claras, campos obrigatórios), mas o PostgreSQL também recusa o que é inválido. Assim, qualquer caminho de acesso (a aplicação, um script ou outro sistema no futuro) respeita as mesmas regras.
 
 ---
 
@@ -52,97 +53,80 @@ A decisão de projeto que organiza todo o trabalho é **colocar as regras de neg
 
 ### 2.1 Processo de locação
 
-O processo tem cinco etapas:
+O processo tem quatro etapas:
 
-1. **Reserva.** O cliente escolhe categoria de veículo, lojas de retirada e devolução e o período. O sistema consulta a disponibilidade e informa uma estimativa de valor. A reserva pode ser feita pelo próprio cliente no site ou por um atendente no balcão, e pode ser cancelada com justificativa.
-2. **Retirada.** O cliente comparece à loja. O atendente confere os documentos e a CNH, registra a **cautela** no cartão de crédito, escolhe um veículo da categoria reservada e anota quilometragem e nível de combustível de saída. A reserva passa a *efetivada* e o veículo a *locado*.
-3. **Devolução.** O atendente registra quilometragem, combustível e loja de devolução. O sistema calcula o **valor final**: diárias, horas extras por atraso, combustível faltante, taxa por devolução em outra loja e desconto. O veículo volta à frota.
-4. **Pagamento.** O pagamento é registrado em cartão de crédito, cartão de débito ou PIX, podendo ser parcial. Quando o total pago iguala o valor final, a locação fica *paga*.
-5. **Pós-locação.** Multas de trânsito recebidas depois são vinculadas à locação. A cautela é liberada quando a locação está paga e não há multas pendentes; se houver, permanece retida até o pagamento da última.
+1. **Cadastro.** O funcionário cadastra os clientes (nome, CPF, e-mail, telefone, número e validade da CNH) e os carros (placa, modelo, ano, quilometragem e categoria). Cada categoria tem o seu valor de diária.
+2. **Aluguel.** O funcionário escolhe um carro disponível, o cliente e as datas de retirada e devolução. O sistema confere se o carro está disponível e se a CNH do cliente vale até a data de devolução, registra a reserva e a locação e informa uma estimativa de valor. O carro passa a ficar *locado*.
+3. **Devolução.** O funcionário informa a data e a quilometragem de chegada. O sistema calcula o **valor final**: as diárias usadas (no mínimo uma) mais 30% da diária para cada dia de atraso em relação à devolução prevista. O carro volta a ficar *disponível*, com a quilometragem atualizada.
+4. **Pagamento.** O pagamento é registrado por cartão (com a bandeira) ou Pix (com o código da transação). Quando o total pago cobre o valor final, a locação fica *paga*.
+
+Fora do fluxo de aluguel, o funcionário pode **mandar um carro para manutenção**, tirando-o da lista de disponíveis, e liberá-lo depois.
 
 ### 2.2 Atores
 
 | Ator | Responsabilidades |
 |---|---|
-| **Cliente** | Pessoa física (CPF e CNH) ou jurídica (CNPJ e condutor responsável). Cadastra-se no site, consulta disponibilidade, faz reservas e acompanha suas locações. |
-| **Atendente** | Opera o balcão: cadastra clientes, faz e cancela reservas, registra retirada, devolução, pagamentos e multas. |
-| **Gerente** | Tudo o que o atendente faz, mais: gerencia funcionários, frota, categorias, preços, lojas e manutenções; consulta relatórios e a auditoria. |
+| **Administrador** | Usuário da aplicação: entra com usuário e senha e faz todas as operações das telas (clientes, carros, aluguel, devolução e pagamento). |
+| **Atendente** (perfil do banco) | Consulta, cadastra e altera clientes, reservas, locações e pagamentos, mas não exclui nada. |
+| **Gerente** (perfil do banco) | Tudo o que o atendente faz, mais gerenciar categorias e carros, excluir cadastros e consultar a auditoria e o faturamento. |
+
+Os perfis atendente e gerente são usuários do PostgreSQL, com privilégios diferentes (seção 5.8 e [`docs/politicas-de-acesso.md`](politicas-de-acesso.md)).
 
 ### 2.3 Requisitos
 
-Os requisitos completos (RF01 a RF24, RNF01 a RNF09 e regras de negócio RN01 a RN12) estão na documentação da equipe. A tabela abaixo mostra **onde cada um foi atendido**.
+Os requisitos completos estão no [README](../README.md). A tabela abaixo mostra **onde cada um foi atendido**.
 
 **Requisitos funcionais**
 
 | Requisito | Descrição resumida | Onde foi atendido |
 |---|---|---|
-| RF01 | Índices nas colunas mais consultadas | `sql/03_indices.sql` e índices únicos de `02_create_tables.sql` |
-| RF02 | Login com e-mail e senha | `fn_autenticar`; `AutenticacaoService`; tela de login |
-| RF03 | Gerente gerencia funcionários | `GerenteControlador` (/gerente/funcionarios); privilégios do grupo gerente |
-| RF04 | Cadastro de clientes PF e PJ, inclusive pelo site | Cadastro no site (`/cadastro`) e no balcão (`/atendente/cliente/novo`) |
-| RF05 | Veículos, categorias e lojas | Telas de frota e categorias do gerente |
-| RF06 | Disponibilidade por categoria, loja e período | View `vw_disponibilidade_frota` e função `fn_veiculos_disponiveis` |
-| RF07 | Reservas pelo site e pelo balcão | `ReservaService` com bloqueio por transação |
-| RF08 | Cancelamento com justificativa | Procedure `sp_cancelar_reserva` |
-| RF09 | Retirada com veículo, km, combustível e cautela | Procedure `sp_abrir_locacao` |
-| RF10 | Devolução com cálculo do valor | Procedure `sp_registrar_devolucao` |
-| RF11 | Pagamento por crédito, débito ou PIX | Procedure `sp_registrar_pagamento`; herança `Pagamento` |
-| RF12 | Manutenção de veículos | Tabela `manutencao`; trigger `trg_manutencao_status_veiculo` |
-| RF13 | Histórico de locações do cliente | View `vw_historico_cliente`; área do cliente |
-| RF14 | Relatórios a partir de views | Relatórios R01 a R13; painel gerencial |
-| RF15 | Impedir locações conflitantes | Trigger `trg_locacao_conflito` e `trg_locacao_atualiza_veiculo` |
-| RF16 | Condutor com 21 anos ou mais e CNH com 2 anos ou mais | Trigger `trg_locacao_valida_condutor` |
-| RF17 | Auditoria de pagamentos e preços | Triggers `trg_auditoria_pagamento` e `trg_auditoria_preco` |
-| RF18 | Perfis de acesso, backup e restauração | `07_roles_privilegios.sql`; `10_backup_restauração.sh` |
-| RF19 a RF23 | Diagramas UML | Seção 6 |
-| RF24 | Multas de trânsito vinculadas à locação | Tabela `multa`; trigger `trg_multa_libera_cautela` |
+| RF01 | Índices na placa, no CPF e nas datas da reserva | `sql/03_indices.sql` e índices dos campos `UNIQUE` em `02_create_tables.sql` |
+| RF02 | Acesso com usuário e senha | Tela de login (`index.html`) |
+| RF03 | Cadastrar, consultar e excluir clientes | Tela Clientes; `ClienteController` e `ClienteDAO` |
+| RF04 | Cadastrar, consultar e excluir carros por categoria | Tela Carros; `VeiculoController` e `VeiculoDAO` |
+| RF05 | Consulta de carros disponíveis por view | View `vw_veiculos_disponiveis` (relatório R02) |
+| RF06 | Alugar um carro disponível | Tela Alugar; `LocacaoController` e `LocacaoDAO.alugar()`, em uma transação |
+| RF07 | Cancelar reserva com justificativa por procedure | Procedure `sp_cancelar_reserva` |
+| RF08 | Devolver o carro informando a quilometragem | Tela Locações; `LocacaoController`; procedure `sp_devolver_veiculo` no banco |
+| RF09 | Calcular o valor final por procedure | Função `fn_valor_final` e procedure `sp_devolver_veiculo`; a mesma regra está em `Locacao.calcularValorFinal()` |
+| RF10 | Pagamento por cartão ou Pix | Tela Locações; `PagamentoDAO`; herança `Pagamento` → `PagamentoCartao` / `PagamentoPix` |
+| RF11 | Manutenção do carro | Botão de manutenção na tela Carros; `VeiculoController` |
+| RF12 | Lista de locações | Tela Locações; `LocacaoController` |
+| RF13 | Relatórios por views | Relatórios R01 a R07 (seção 5.5) |
+| RF14 | Impedir aluguel de carro indisponível e liberar o carro na devolução | Triggers `trg_validar_locacao` e `trg_liberar_veiculo` |
+| RF15 | Impedir reserva com CNH vencida antes da devolução | Trigger `trg_validar_cnh`; também conferido na aplicação (`Cliente.cnhValidaEm()`) |
+| RF16 | Auditoria dos pagamentos | Trigger `trg_auditar_pagamento` e tabela `auditoria_pagamento` |
+| RF17 | Perfis de acesso, backup e restauração | `sql/09_roles_privilegios.sql` e `sql/10_backup_restore.sh` |
+| RF18 a RF22 | Diagramas UML | Seção 6 |
 
 **Requisitos não funcionais**
 
 | Requisito | Como foi atendido |
 |---|---|
 | RNF01 / RNF02 | Java 17 com interface web acessada pelo navegador. |
-| RNF03 | Todos os dados em PostgreSQL. |
-| RNF04 | Todo acesso usa `PreparedStatement` e `CallableStatement`; nenhuma consulta concatena entrada do usuário. |
-| RNF05 | Senhas guardadas com *bcrypt* (`pgcrypto`); nenhum perfil consegue ler a coluna `senha_hash`. |
-| RNF06 / RNF07 | Pacotes e nomes padrão Java; JavaDoc gerado sem erros. |
-| RNF08 | Plano de sprints em [`docs/plano-de-sprints.md`](plano-de-sprints.md). |
-| RNF09 | Diagramas UML em `docs/uml/`, conferidos com o código e o banco (seção 6). |
-
-**Regras de negócio**
-
-| Regra | Onde é garantida |
-|---|---|
-| RN01 CPF/CNPJ único | Restrições `UNIQUE` em `cliente_pf` e `cliente_pj` |
-| RN02 Placa única | `uq_veiculo_placa` e `ck_veiculo_placa` |
-| RN03 Sem locações conflitantes | Trigger `trg_locacao_conflito` |
-| RN04 / RN11 Veículo indisponível ou em manutenção não é oferecido | `fn_veiculos_disponiveis` e trigger de manutenção |
-| RN05 CNH válida | Trigger `trg_locacao_valida_condutor` |
-| RN06 Devolução posterior à retirada | `ck_reserva_periodo`, `ck_locacao_prevista`, `ck_locacao_real` |
-| RN07 / RN08 Valor por diária e período; atraso cobrado | Procedure `sp_registrar_devolucao` |
-| RN09 Locação finalizada não é alterada livremente | Trigger `trg_locacao_imutavel` |
-| RN10 Só gerente gerencia funcionários | Privilégios do banco e controle de rotas na aplicação |
-| RN12 Forma de pagamento informada | `ck_pagamento_forma`, tabelas `pagamento_cartao` e `pagamento_pix` |
+| RNF03 | Todos os dados ficam no PostgreSQL. |
+| RNF04 | Todo acesso ao banco usa `PreparedStatement`; nenhuma consulta concatena dados digitados pelo usuário. |
+| RNF05 | Atendido em parte: as senhas dos usuários do banco são guardadas pelo PostgreSQL de forma criptografada; o login da aplicação usa usuário e senha fixos (limitação na seção 11). |
+| RNF06 / RNF07 | Pacotes e nomes no padrão Java; classes e métodos documentados com JavaDoc. |
+| RNF08 | Código e documentação versionados no GitHub. |
+| RNF09 | Diagramas UML conferidos com o código e o banco (seção 6). |
 
 ---
 
 ## 3 Metodologia e planejamento
 
-O desenvolvimento seguiu **Scrum simplificado** com quadro **Kanban no GitHub Projects**, em cinco sprints de uma semana:
+O trabalho foi organizado em etapas, com as tarefas divididas entre os integrantes e acompanhadas no **GitHub Projects**:
 
-| Sprint | Objetivo |
+| Etapa | Objetivo |
 |---|---|
-| 1 | Fundamentos e banco de dados: requisitos, modelo relacional, tabelas, índices, views e relatórios. |
-| 2 | Regras no banco e segurança: *triggers*, *procedures*, perfis de acesso, backup e testes das regras. |
-| 3 | Modelagem de software: casos de uso, classes, sequência, atividades e estados. |
-| 4 | Sistema em Java: domínio, acesso a dados, login, telas, cadastros e relatórios. |
-| 5 | Entrega: README/artigo, revisão cruzada, ensaio da apresentação e autoavaliação. |
+| 1 | Requisitos e modelo de negócio. |
+| 2 | Banco de dados: modelo relacional, tabelas, índices, views e relatórios. |
+| 3 | Regras no banco e segurança: *triggers*, *procedures*, perfis de acesso, backup e testes. |
+| 4 | Modelagem UML: casos de uso, classes, sequência, atividades e estados. |
+| 5 | Aplicação Java: classes de domínio, acesso a dados e telas. |
+| 6 | Entrega: README, artigo, revisão e apresentação. |
 
-As regras de trabalho: toda tarefa vira uma *issue* com responsável; ninguém altera a `main` diretamente (cada tarefa tem um *branch* e um *pull request* revisado por um colega); mensagens de commit descrevem a mudança; e uma tarefa só está pronta quando funciona, passou nos testes, está documentada e foi revisada. O plano completo, com as tarefas de cada sprint, está em [`docs/plano-de-sprints.md`](plano-de-sprints.md).
-
-![Quadro Kanban no GitHub Projects](telas/quadro-github-projects.png)
-
-*Figura — Quadro do projeto no GitHub Projects.*
+Durante o desenvolvimento, o grupo simplificou o escopo do sistema: a primeira versão tinha várias lojas, funcionários, clientes pessoa jurídica, multas de trânsito e caução. Para que todos conseguissem entender e explicar o código, a versão final ficou com o núcleo do processo de locação, mantendo todos os itens técnicos pedidos pelas três disciplinas. Todo o histórico dessa mudança está nos *commits* do repositório.
 
 ---
 
@@ -903,110 +887,62 @@ esac
 
 </details>
 
+---
+
 ## 6 Modelagem UML
 
-Os diagramas foram escritos em Mermaid, que o GitHub renderiza diretamente. Cada diagrama cita os requisitos atendidos e, quando aplicável, a *procedure* ou o *trigger* que implementa cada transição, o que mantém a modelagem consistente com o código e o banco (RNF09).
+Os diagramas de casos de uso, sequência, atividades e estados foram escritos em Mermaid, que o GitHub desenha diretamente; o diagrama de classes é uma imagem. Cada diagrama cita os requisitos atendidos e, quando aplicável, a classe, a *procedure* ou o *trigger* que implementa cada passo, o que mantém a modelagem consistente com o código e o banco (RNF09).
 
-### 6.1 Casos de uso (RF19)
+### 6.1 Casos de uso (RF18)
 
-Atores: **Cliente** (pessoa física ou jurídica, usa o site), **Atendente** (funcionário de balcão) e **Gerente**
-(gestão da locadora). Os casos de uso derivam dos requisitos funcionais e do processo de negócio do README.
+Ator: **Administrador**, o funcionário da locadora que usa a aplicação. Todos os casos de uso abaixo fazem parte do sistema Next Drive. Os casos de uso derivam dos requisitos funcionais e do processo de negócio da seção 2.
 
 ```mermaid
 flowchart LR
-    Cliente(["Cliente"])
-    Atendente(["Atendente"])
-    Gerente(["Gerente"])
+    Admin(["Administrador"])
 
-    subgraph SISTEMA["Sistema Next Drive"]
-        direction TB
-        UC01(["UC01 Fazer login"])
-        UC02(["UC02 Cadastrar-se no site"])
-        UC03(["UC03 Consultar disponibilidade"])
-        UC04(["UC04 Fazer reserva pelo site"])
-        UC05(["UC05 Consultar minhas locações"])
+    UC01(["UC01 Fazer login"])
+    UC02(["UC02 Gerenciar clientes"])
+    UC03(["UC03 Gerenciar carros"])
+    UC04(["UC04 Enviar carro para manutenção"])
+    UC05(["UC05 Alugar carro"])
+    UC06(["UC06 Consultar locações"])
+    UC07(["UC07 Devolver carro e pagar"])
+    UC08(["UC08 Conferir disponibilidade e CNH"])
+    UC09(["UC09 Calcular valor final"])
+    UC10(["UC10 Registrar pagamento"])
 
-        UC06(["UC06 Cadastrar e alterar clientes"])
-        UC07(["UC07 Fazer reserva no balcão"])
-        UC08(["UC08 Cancelar reserva"])
-        UC09(["UC09 Registrar retirada"])
-        UC10(["UC10 Registrar devolução"])
-        UC11(["UC11 Registrar pagamento"])
-        UC12(["UC12 Registrar multa de trânsito"])
-        UC13(["UC13 Consultar histórico do cliente"])
+    Admin --- UC01
+    Admin --- UC02
+    Admin --- UC03
+    Admin --- UC04
+    Admin --- UC05
+    Admin --- UC06
+    Admin --- UC07
 
-        UC14(["UC14 Gerenciar funcionários"])
-        UC15(["UC15 Gerenciar frota de veículos"])
-        UC16(["UC16 Gerenciar categorias e preços"])
-        UC17(["UC17 Gerenciar lojas"])
-        UC18(["UC18 Registrar manutenção"])
-        UC19(["UC19 Consultar relatórios"])
-
-        UC20(["UC20 Validar condutor e CNH"])
-        UC21(["UC21 Calcular valor final"])
-    end
-
-    Cliente --- UC01
-    Cliente --- UC02
-    Cliente --- UC03
-    Cliente --- UC04
-    Cliente --- UC05
-
-    Atendente --- UC01
-    Atendente --- UC03
-    Atendente --- UC06
-    Atendente --- UC07
-    Atendente --- UC08
-    Atendente --- UC09
-    Atendente --- UC10
-    Atendente --- UC11
-    Atendente --- UC12
-    Atendente --- UC13
-
-    Gerente --- UC01
-    Gerente --- UC14
-    Gerente --- UC15
-    Gerente --- UC16
-    Gerente --- UC17
-    Gerente --- UC18
-    Gerente --- UC19
-
-    UC04 -.->|include| UC03
-    UC07 -.->|include| UC03
-    UC09 -.->|include| UC20
-    UC10 -.->|include| UC21
-    UC12 -.->|extend| UC10
+    UC05 -.->|include| UC08
+    UC07 -.->|include| UC09
+    UC07 -.->|include| UC10
 ```
 
 #### Descrição dos casos de uso
 
-| Código | Caso de uso | Ator | Requisitos | Descrição |
-|---|---|---|---|---|
-| UC01 | Fazer login | Todos | RF02 | Entra no sistema com e-mail e senha; o perfil (cliente, atendente ou gerente) define o que fica disponível. |
-| UC02 | Cadastrar-se no site | Cliente | RF04 | Cliente PF (CPF e CNH) ou PJ (CNPJ e condutor responsável) se cadastra sozinho. |
-| UC03 | Consultar disponibilidade | Cliente, Atendente | RF06, RN04, RN11 | Consulta veículos livres por categoria, loja e período; veículos em manutenção não aparecem. |
-| UC04 | Fazer reserva pelo site | Cliente | RF07 | Informa dados, horário, lojas de retirada e devolução e categoria; o sistema estima o valor. |
-| UC05 | Consultar minhas locações | Cliente | RF13 | O cliente vê o histórico das suas locações. |
-| UC06 | Cadastrar e alterar clientes | Atendente | RF04 | Cadastro no balcão de clientes PF e PJ. |
-| UC07 | Fazer reserva no balcão | Atendente | RF07 | Mesma reserva do site, registrada pelo atendente (canal BALCÃO). |
-| UC08 | Cancelar reserva | Atendente | RF08 | Cancela reserva ativa com justificativa obrigatória (`sp_cancelar_reserva`). |
-| UC09 | Registrar retirada | Atendente | RF09, RN03, RN05 | Confere documentos, registra a cautela, escolhe o veículo e anota km e combustível (`sp_abrir_locacao`). |
-| UC10 | Registrar devolução | Atendente | RF10, RN06, RN08 | Anota km e combustível de chegada; o sistema calcula o valor (`sp_registrar_devolucao`). |
-| UC11 | Registrar pagamento | Atendente | RF11, RN12 | Registra cartão de crédito, débito ou PIX; quita a locação e libera a cautela se não houver pendências. |
-| UC12 | Registrar multa de trânsito | Atendente | RF24 | Vincula multa recebida depois a uma locação para cobrança do cliente. |
-| UC13 | Consultar histórico do cliente | Atendente | RF13 | Lista as locações de um cliente. |
-| UC14 | Gerenciar funcionários | Gerente | RF03, RN10 | Cadastra, consulta e altera funcionários (apenas gerentes). |
-| UC15 | Gerenciar frota de veículos | Gerente | RF05, RN02 | Cadastra e altera veículos (placa única). |
-| UC16 | Gerenciar categorias e preços | Gerente | RF05, RF17 | Define diárias e taxas; as alterações de preço são auditadas. |
-| UC17 | Gerenciar lojas | Gerente | RF05 | Cadastra e altera lojas. |
-| UC18 | Registrar manutenção | Gerente | RF12 | Abre e conclui manutenções; o veículo fica indisponível enquanto durar. |
-| UC19 | Consultar relatórios | Gerente | RF14 | Relatórios administrativos baseados em views. |
-| UC20 | Validar condutor e CNH | (incluído em UC09) | RF16, RN05 | Exige idade mínima de 21 anos, CNH com 2 anos ou mais e dentro da validade. |
-| UC21 | Calcular valor final | (incluído em UC10) | RN07, RN08 | Diárias, horas extras, diferença de combustível, taxa de outra loja e desconto. |
+| Código | Caso de uso | Requisitos | Descrição |
+|---|---|---|---|
+| UC01 | Fazer login | RF02 | Entra no sistema com usuário e senha. |
+| UC02 | Gerenciar clientes | RF03 | Cadastra, consulta e exclui clientes, com CPF, e-mail e CNH. |
+| UC03 | Gerenciar carros | RF04 | Cadastra, consulta e exclui carros, cada um de uma categoria. |
+| UC04 | Enviar carro para manutenção | RF11 | Tira o carro da lista de disponíveis e, depois, libera de novo. Carro locado não pode ir para manutenção. |
+| UC05 | Alugar carro | RF06, RF14, RF15 | Escolhe o carro, o cliente e as datas; o sistema registra a reserva e a locação e mostra a estimativa de valor. |
+| UC06 | Consultar locações | RF12 | Lista as locações com cliente, carro, datas, valor e situação. |
+| UC07 | Devolver carro e pagar | RF08, RF10 | Informa a data e a quilometragem de chegada e a forma de pagamento. |
+| UC08 | Conferir disponibilidade e CNH | RF05, RF14, RF15 | O carro precisa estar disponível e a CNH do cliente válida até a devolução. |
+| UC09 | Calcular valor final | RF09 | Diárias usadas (mínimo 1) mais 30% da diária por dia de atraso. |
+| UC10 | Registrar pagamento | RF10, RF16 | Grava o pagamento por cartão ou Pix; o banco audita a operação e marca a locação como paga. |
 
-**Relações:** `include` = o caso de uso base sempre usa o outro; `extend` = o registro de multa pode ocorrer
-depois de uma devolução (pós-locação).
+**Relações:** `include` = o caso de uso base sempre usa o outro.
 
+O cancelamento de reserva (RF07) e os relatórios (RF13) não têm tela: são feitos direto no banco, pela *procedure* `sp_cancelar_reserva` e pelas consultas da seção 5.5.
 
 ### 6.2 Classes (RF19)
 
@@ -1050,244 +986,157 @@ No código, `Veiculo`, `Reserva` e `Locacao` guardam o objeto associado (por exe
 
 O diagrama mostra o pacote `model`. Os pacotes `dao` (acesso ao banco com JDBC) e `controller` (rotas da aplicação Spring Boot) usam essas classes.
 
+### 6.3 Sequência (RF20)
 
-### 6.3 Sequência (RF21)
+Fluxos do **aluguel** e da **devolução com pagamento**. As camadas seguem a arquitetura do código Java: tela no navegador → `Controller` (rotas do Spring Boot) → `DAO` (JDBC com consultas parametrizadas) → PostgreSQL (triggers do script `07`).
 
-Fluxos de **reserva**, **retirada** e **devolução**. As camadas seguem a arquitetura do código Java:
-interface web → `Service` (regras de negócio) → `DAO` (JDBC, consultas parametrizadas) → PostgreSQL
-(procedures e triggers dos scripts `09` e `08`).
-
-#### 1. Reserva (pelo site ou balcão) — RF06, RF07
+#### 1. Aluguel — RF06, RF14, RF15
 
 ```mermaid
 sequenceDiagram
-    actor U as Cliente ou Atendente
-    participant W as Interface Web
-    participant RS as ReservaService
-    participant VD as VeiculoDAO
-    participant RD as ReservaDAO
-    participant DB as PostgreSQL
-
-    U->>W: informa categoria, lojas e período
-    W->>RS: consultarDisponibilidade(categoria, loja, inicio, fim)
-    RS->>VD: veiculosDisponiveis(categoria, loja, inicio, fim)
-    VD->>DB: SELECT * FROM fn_veiculos_disponiveis(?, ?, ?, ?)
-    DB-->>VD: veículos livres (sem locação e sem manutenção)
-    RS->>RD: contarReservasAtivas(categoria, loja, inicio, fim)
-    RD->>DB: SELECT COUNT(*) FROM reserva WHERE status = 'ATIVA' AND período conflita
-    DB-->>RD: quantidade reservada
-    alt veículos livres maior que reservas ativas
-        RS->>RS: calcularEstimativa(categoria, inicio, fim)
-        RS-->>W: disponível com valor estimado
-        W-->>U: mostra a estimativa
-        U->>W: confirma a reserva
-        W->>RS: criarReserva(dados)
-        RS->>RD: inserir(reserva)
-        RD->>DB: INSERT INTO reserva (...) VALUES (?, ?, ...)
-        DB-->>RD: id da reserva
-        RS-->>W: reserva confirmada
-        W-->>U: exibe o comprovante da reserva
-    else sem disponibilidade
-        RS-->>W: indisponível no período
-        W-->>U: sugere outro período, loja ou categoria
-    end
-```
-
-#### 2. Retirada do veículo (abertura da locação) — RF09, RF15, RF16
-
-```mermaid
-sequenceDiagram
-    actor A as Atendente
-    participant W as Interface Web
-    participant LS as LocacaoService
-    participant RD as ReservaDAO
+    actor U as Administrador
+    participant T as Tela Alugar
+    participant LC as LocacaoController
+    participant CD as ClienteDAO
     participant VD as VeiculoDAO
     participant LD as LocacaoDAO
     participant DB as PostgreSQL
 
-    A->>W: busca a reserva do cliente
-    W->>LS: buscarReservaAtiva(reservaId)
-    LS->>RD: buscarPorId(reservaId)
-    RD->>DB: SELECT ... FROM reserva WHERE id = ?
-    DB-->>RD: reserva ATIVA
-    A->>A: confere CNH e documentos, registra a cautela no cartão
-    W->>LS: veiculosParaRetirada(reserva)
-    LS->>VD: veiculosDisponiveis(categoria, loja, agora, devolucaoPrevista)
-    VD->>DB: SELECT * FROM fn_veiculos_disponiveis(?, ?, ?, ?)
-    DB-->>VD: veículos livres da categoria
-    A->>W: escolhe o veículo, informa km e nível de combustível
-    W->>LS: abrirLocacao(reserva, veiculo, condutor, km, combustivel)
-    LS->>LD: abrir(...)
-    LD->>DB: CALL sp_abrir_locacao(?, ?, ?, ?, ?, ?)
-    DB->>DB: trigger valida conflito, veículo disponível e condutor
-    alt validação aprovada
-        DB->>DB: INSERT em locacao, veículo passa a LOCADO, reserva EFETIVADA
-        DB-->>LD: concluído
-        LD-->>LS: locação aberta
-        LS-->>W: retirada registrada
-        W-->>A: exibe o contrato com valor da diária e cautela
-    else regra violada (RN03, RN04, RN05, RF16)
-        DB-->>LD: erro com a regra violada
-        LD-->>LS: exceção de regra de negócio
-        LS-->>W: motivo da recusa
-        W-->>A: mostra a mensagem (por exemplo, condutor com menos de 21 anos)
+    U->>T: escolhe carro, cliente e datas
+    T->>LC: POST /locacoes
+    LC->>CD: buscar(clienteId)
+    LC->>VD: buscar(veiculoId)
+    LC->>LC: confere carro disponível, datas e CNH válida até a devolução
+    alt dados válidos
+        LC->>LD: alugar(cliente, veiculo, retirada, devolucao)
+        LD->>DB: INSERT INTO reserva (status EFETIVADA)
+        DB->>DB: trigger trg_validar_cnh confere a CNH
+        LD->>DB: INSERT INTO locacao (status ABERTA)
+        DB->>DB: trigger trg_validar_locacao confere se o carro está livre
+        LD->>DB: UPDATE veiculo SET status = 'LOCADO'
+        LD->>DB: COMMIT
+        LC-->>T: aluguel registrado e estimativa de valor
+        T-->>U: mostra a mensagem
+    else regra violada
+        LC-->>T: motivo da recusa
+        T-->>U: mostra o erro (por exemplo, CNH vence antes da devolução)
     end
 ```
 
-#### 3. Devolução e pagamento — RF10, RF11
+#### 2. Devolução e pagamento — RF08, RF09, RF10, RF16
 
 ```mermaid
 sequenceDiagram
-    actor A as Atendente
-    participant W as Interface Web
-    participant LS as LocacaoService
+    actor U as Administrador
+    participant T as Tela Locações
+    participant LC as LocacaoController
+    participant L as Locacao
     participant LD as LocacaoDAO
     participant PD as PagamentoDAO
     participant DB as PostgreSQL
 
-    A->>W: informa km de chegada, combustível e loja de devolução
-    W->>LS: registrarDevolucao(locacaoId, km, combustivel, loja, desconto)
-    LS->>LD: registrarDevolucao(...)
-    LD->>DB: CALL sp_registrar_devolucao(?, ?, ?, ?, ?, ?)
-    DB->>DB: calcula diárias, horas extras, combustível e taxa de outra loja
-    DB->>DB: locação ENCERRADA, trigger devolve o veículo à frota
-    DB-->>LD: valor final
-    LD-->>LS: locação encerrada
-    LS-->>W: valor final detalhado
-    W-->>A: exibe o valor a pagar
-
-    loop até quitar o valor final
-        A->>W: informa valor e forma (crédito, débito ou PIX)
-        W->>LS: registrarPagamento(locacaoId, pagamento)
-        LS->>PD: inserir(pagamento)
-        PD->>DB: CALL sp_registrar_pagamento(?, ?, ?, ?, ...)
-        DB->>DB: grava o pagamento, o trigger de auditoria registra a operação
-        DB-->>PD: concluído
-    end
-
-    alt total pago igual ao valor final
-        DB->>DB: locação PAGA
-        alt existem multas pendentes
-            DB->>DB: cautela permanece RETIDA
-        else sem pendências
-            DB->>DB: cautela LIBERADA
-        end
-        LS-->>W: locação quitada
-        W-->>A: exibe o recibo
-    end
+    U->>T: informa data, km de chegada e forma de pagamento
+    T->>LC: PUT /locacoes/{id}/devolucao
+    LC->>LD: buscar(id)
+    LC->>LC: confere locação aberta, km e data
+    LC->>L: encerrar(km, data)
+    L->>L: calcularValorFinal(data)
+    LC->>LD: encerrar(locacao)
+    LD->>DB: UPDATE locacao SET status = 'ENCERRADA', valor_final = ?
+    DB->>DB: trigger trg_liberar_veiculo deixa o carro DISPONIVEL
+    LD->>DB: COMMIT
+    LC->>PD: salvar(PagamentoCartao ou PagamentoPix)
+    PD->>DB: INSERT INTO pagamento
+    DB->>DB: trigger trg_auditar_pagamento grava a auditoria
+    PD->>DB: UPDATE locacao SET status = 'PAGA' (se o total pago cobre o valor)
+    PD->>DB: COMMIT
+    LC-->>T: valor final e forma de pagamento
+    T-->>U: mostra o recibo
 ```
 
 **Observações**
-- Regras críticas (conflito de locação, idade e CNH, cálculo do valor, cautela) ficam no banco, por triggers e procedures; o Java apenas chama as procedures e traduz os erros em mensagens (RNF04, consultas parametrizadas).
-- Toda comunicação com o banco usa `PreparedStatement` e `CallableStatement`.
+- As regras principais (carro livre, CNH válida, devolução do carro à frota e auditoria) são garantidas pelos triggers do banco, mesmo que a aplicação já as confira antes.
+- Toda comunicação com o banco usa `PreparedStatement` (RNF04).
 
+### 6.4 Atividades (RF21)
 
-### 6.4 Atividades (RF22)
-
-Fluxo completo da contratação de um veículo, da reserva ao pós-locação, com as responsabilidades divididas em
-raias: **Cliente**, **Atendente** e **Sistema**. Os losangos são decisões; as regras citadas (RN e RF) estão nos
-triggers e procedures do banco.
+Fluxo do aluguel de um carro, da escolha até o pagamento, com as responsabilidades divididas em raias: **Administrador**, **Aplicação** e **Banco de dados**. Os losangos são decisões.
 
 ```mermaid
 flowchart TD
     Inicio(("Início"))
     Fim(("Fim"))
 
-    subgraph RAIA_CLIENTE["Cliente"]
-        C1["Solicita a reserva: categoria, lojas e período"]
-        C2["Comparece à loja de retirada"]
-        C3["Utiliza o veículo"]
-        C4["Devolve o veículo"]
-        C5["Paga o valor final"]
+    subgraph RAIA_ADMIN["Administrador"]
+        A1["Escolhe o carro, o cliente e as datas"]
+        A2["Entrega o carro ao cliente"]
+        A3["Recebe o carro e informa data e km de chegada"]
+        A4["Informa a forma de pagamento: cartão ou Pix"]
     end
 
-    subgraph RAIA_ATENDENTE["Atendente"]
-        A1["Confere documentos e CNH"]
-        A2["Registra a cautela no cartão de crédito"]
-        A3["Escolhe o veículo da categoria e registra km e combustível de saída"]
-        A4["Registra km, combustível e loja de devolução"]
-        A5["Registra o pagamento: crédito, débito ou PIX"]
-        A6["Registra multa de trânsito recebida depois"]
+    subgraph RAIA_APP["Aplicação"]
+        P1{"Carro disponível e CNH válida até a devolução?"}
+        P2["Mostra o motivo da recusa"]
+        P3["Mostra a estimativa de valor"]
+        P4["Calcula o valor final: diárias e 30% da diária por dia de atraso"]
+        P5["Mostra o valor final e a forma de pagamento"]
     end
 
-    subgraph RAIA_SISTEMA["Sistema"]
-        S1["Verifica a disponibilidade e calcula a estimativa de valor"]
-        D1{"Há veículo disponível no período?"}
-        S2["Informa a indisponibilidade"]
-        S3["Registra a reserva como ATIVA"]
-        D2{"Condutor com 21 anos ou mais, CNH com 2 anos ou mais e válida, veículo livre?"}
-        S4["Recusa a retirada e mostra o motivo"]
-        S5["Abre a locação: veículo LOCADO e reserva EFETIVADA"]
-        S6["Calcula o valor final: diárias, horas extras, combustível, taxa de outra loja e desconto"]
-        S7["Encerra a locação e devolve o veículo à frota"]
-        D3{"Total pago é igual ao valor final?"}
-        D4{"Há multas pendentes?"}
-        S8["Locação PAGA e cautela RETIDA"]
-        S9["Locação PAGA e cautela LIBERADA"]
-        S10["Multa fica PENDENTE; ao pagar a última, a cautela é liberada"]
+    subgraph RAIA_BANCO["Banco de dados"]
+        B1["Registra a reserva EFETIVADA e a locação ABERTA; carro LOCADO"]
+        B2["Encerra a locação; o trigger devolve o carro como DISPONIVEL"]
+        B3["Grava o pagamento; o trigger registra a auditoria"]
+        D1{"Total pago cobre o valor final?"}
+        B4["Locação PAGA"]
+        B5["Locação continua ENCERRADA, com saldo devedor"]
     end
 
-    Inicio --> C1
-    C1 --> S1
-    S1 --> D1
-    D1 -->|Não| S2
-    S2 --> Fim
-    D1 -->|Sim| S3
-    S3 --> C2
-    C2 --> A1
-    A1 --> A2
+    Inicio --> A1
+    A1 --> P1
+    P1 -->|Não| P2
+    P2 --> Fim
+    P1 -->|Sim| B1
+    B1 --> P3
+    P3 --> A2
     A2 --> A3
-    A3 --> D2
-    D2 -->|Não| S4
-    S4 --> Fim
-    D2 -->|Sim| S5
-    S5 --> C3
-    C3 --> C4
-    C4 --> A4
-    A4 --> S6
-    S6 --> S7
-    S7 --> C5
-    C5 --> A5
-    A5 --> D3
-    D3 -->|Não, pagamento parcial| C5
-    D3 -->|Sim| D4
-    D4 -->|Sim| S8
-    D4 -->|Não| S9
-    S8 --> A6
-    A6 --> S10
-    S10 --> Fim
-    S9 --> Fim
+    A3 --> P4
+    P4 --> B2
+    B2 --> A4
+    A4 --> B3
+    B3 --> D1
+    D1 -->|Sim| B4
+    D1 -->|Não| B5
+    B4 --> P5
+    B5 --> P5
+    P5 --> Fim
 ```
 
 #### Pontos de decisão e regras associadas
 
-| Decisão | Regra | Onde é garantida |
+| Decisão | Requisito | Onde é garantida |
 |---|---|---|
-| Há veículo disponível? | RN03, RN04, RN11, RF06 | `fn_veiculos_disponiveis` e reservas ativas na consulta de disponibilidade |
-| Condutor e veículo válidos? | RF16, RN05, RN03, RN04 | Triggers `trg_locacao_valida_condutor` e `trg_locacao_conflito` |
-| Valor final | RN06, RN07, RN08 | Procedure `sp_registrar_devolucao` |
-| Pagamento quita a locação? | RN12 | Procedure `sp_registrar_pagamento` |
-| Multas pendentes? | Processo de negócio (pós-locação) | Procedure de pagamento e trigger `trg_multa_libera_cautela` |
+| Carro disponível e CNH válida? | RF14, RF15 | `LocacaoController` e triggers `trg_validar_locacao` e `trg_validar_cnh` |
+| Valor final | RF09 | `Locacao.calcularValorFinal()` e, no banco, `fn_valor_final` |
+| Total pago cobre o valor? | RF10 | `PagamentoDAO`, que marca a locação como `PAGA` |
 
+Pela tela, a devolução já registra o pagamento do valor total, então a locação termina `PAGA`. O caminho de pagamento parcial existe no banco (a locação fica `ENCERRADA` com saldo devedor, como no relatório R07).
 
-### 6.5 Estados (RF23)
+### 6.5 Estados (RF22)
 
-Cada transição indica o evento que a provoca e, entre parênteses, a procedure ou o trigger responsável.
-Os estados correspondem exatamente aos valores das colunas `status` do banco.
+Cada transição indica o evento que a provoca e, entre parênteses, a classe, a *procedure* ou o *trigger* responsável. Os estados são exatamente os valores das colunas `status` do banco e das enumerações do Java.
 
 #### Reserva (`reserva.status`)
 
 ```mermaid
 stateDiagram-v2
-    [*] --> ATIVA : reserva criada no site ou no balcão
+    [*] --> EFETIVADA : aluguel pela tela Alugar (LocacaoDAO.alugar)
+    [*] --> ATIVA : reserva antecipada registrada no banco
     ATIVA --> CANCELADA : cancelamento com justificativa (sp_cancelar_reserva)
-    ATIVA --> EFETIVADA : retirada do veículo (sp_abrir_locacao)
     CANCELADA --> [*]
     EFETIVADA --> [*]
 
     note right of CANCELADA
-        Justificativa e data do cancelamento
-        são obrigatórias (RF08).
+        A justificativa é obrigatória (RF07).
     end note
 ```
 
@@ -1295,22 +1144,16 @@ stateDiagram-v2
 
 ```mermaid
 stateDiagram-v2
-    [*] --> DISPONIVEL : veículo cadastrado pelo gerente
-    DISPONIVEL --> LOCADO : retirada (trg_locacao_atualiza_veiculo)
-    LOCADO --> DISPONIVEL : devolução (trg_locacao_atualiza_veiculo)
-    DISPONIVEL --> MANUTENCAO : manutenção aberta (trg_manutencao_status_veiculo)
-    MANUTENCAO --> DISPONIVEL : manutenção concluída (trg_manutencao_status_veiculo)
-    DISPONIVEL --> INATIVO : desativado pelo gerente
-    INATIVO --> DISPONIVEL : reativado pelo gerente
+    [*] --> DISPONIVEL : carro cadastrado
+    DISPONIVEL --> LOCADO : aluguel (LocacaoDAO.alugar)
+    LOCADO --> DISPONIVEL : devolução (trg_liberar_veiculo)
+    DISPONIVEL --> MANUTENCAO : enviado para manutenção (VeiculoController)
+    MANUTENCAO --> DISPONIVEL : liberado da manutenção (VeiculoController)
+    DISPONIVEL --> [*] : carro excluído (só se nunca foi alugado)
 
     note right of LOCADO
-        Veículo locado não entra em manutenção
-        e não pode ser alugado de novo (RN03, RN04).
-    end note
-
-    note right of MANUTENCAO
-        Não aparece na consulta de
-        disponibilidade (RN04, RN11).
+        Não pode ser alugado de novo (trg_validar_locacao)
+        nem ir para manutenção (VeiculoController).
     end note
 ```
 
@@ -1318,39 +1161,25 @@ stateDiagram-v2
 
 ```mermaid
 stateDiagram-v2
-    [*] --> ABERTA : retirada registrada (sp_abrir_locacao)
-    ABERTA --> ENCERRADA : devolução com cálculo do valor (sp_registrar_devolucao)
-    ENCERRADA --> ENCERRADA : pagamento parcial (sp_registrar_pagamento)
-    ENCERRADA --> PAGA : total pago igual ao valor final (sp_registrar_pagamento)
+    [*] --> ABERTA : aluguel registrado
+    ABERTA --> ENCERRADA : devolução com cálculo do valor (Locacao.encerrar, sp_devolver_veiculo)
+    ENCERRADA --> ENCERRADA : pagamento parcial
+    ENCERRADA --> PAGA : total pago cobre o valor final (PagamentoDAO)
     PAGA --> [*]
-
-    note right of ENCERRADA
-        Dados do contrato não podem mais
-        ser alterados livremente (RN09).
-    end note
-
-    note right of PAGA
-        Cautela LIBERADA se não houver multas pendentes;
-        senão permanece RETIDA até a última multa ser paga.
-    end note
 ```
 
 #### Resumo das transições permitidas
 
 | Entidade | De | Para | Evento |
 |---|---|---|---|
+| Reserva | — | EFETIVADA | Aluguel feito pela tela |
 | Reserva | ATIVA | CANCELADA | Cancelamento com justificativa |
-| Reserva | ATIVA | EFETIVADA | Retirada do veículo |
-| Veículo | DISPONIVEL | LOCADO | Abertura da locação |
+| Veículo | DISPONIVEL | LOCADO | Aluguel |
 | Veículo | LOCADO | DISPONIVEL | Devolução |
-| Veículo | DISPONIVEL | MANUTENCAO | Manutenção aberta |
-| Veículo | MANUTENCAO | DISPONIVEL | Manutenção concluída |
-| Veículo | DISPONIVEL, INATIVO | INATIVO, DISPONIVEL | Desativação e reativação pelo gerente |
+| Veículo | DISPONIVEL | MANUTENCAO | Envio para manutenção |
+| Veículo | MANUTENCAO | DISPONIVEL | Liberação da manutenção |
 | Locação | ABERTA | ENCERRADA | Devolução |
-| Locação | ENCERRADA | PAGA | Quitação do valor final |
-
-Qualquer outra transição é bloqueada pelo banco (por exemplo, alterar uma locação paga, ou colocar em manutenção um veículo locado).
-
+| Locação | ENCERRADA | PAGA | Pagamento do valor final |
 
 ---
 
@@ -1358,55 +1187,65 @@ Qualquer outra transição é bloqueada pelo banco (por exemplo, alterar uma loc
 
 ### 7.1 Arquitetura
 
-A aplicação usa **Java 17 puro**, sem frameworks: o servidor HTTP é o `com.sun.net.httpserver` do próprio JDK e o acesso ao banco é feito por JDBC. A única dependência externa é o driver do PostgreSQL. A escolha foi proposital: sem frameworks, cada camada fica visível e pode ser explicada linha a linha.
+A aplicação usa **Java 17** com **Spring Boot 3** (servidor web embutido) e acesso ao banco por **JDBC**, com o driver do PostgreSQL. As telas são páginas HTML com Bootstrap e jQuery, que conversam com a aplicação por requisições HTTP. Ao iniciar, a classe `Application` confere a conexão com o banco, sobe o servidor e abre o navegador em `http://localhost:8080`.
 
-O código está organizado em camadas, em `java/src/main/java/br/edu/unoesc/nextdrive/`:
+O código está em `java/src/main/java/br/edu/unoesc/nextdrive/`:
 
 | Pacote | Responsabilidade |
 |---|---|
-| `model` | Classes de domínio: entidades, enumerações e regras que pertencem ao próprio objeto |
-| `dao` | Acesso ao banco com `PreparedStatement` e `CallableStatement`, uma classe por entidade |
-| `service` | Casos de uso: coordenam DAOs, transações e traduzem erros do banco em mensagens amigáveis (`NegocioException`) |
-| `web` | Servidor HTTP, sessão, controladores por perfil e geração das páginas |
-| `util` | Conexão com o banco e componentes auxiliares |
+| `model` | Classes de domínio: `Categoria`, `Cliente`, `Veiculo`, `Reserva`, `Locacao`, `Pagamento` e subclasses, e as enumerações de situação |
+| `dao` | Acesso ao banco com `PreparedStatement`, uma classe por entidade, e a conexão (`SingleConnection`) |
+| `controller` | Rotas da aplicação (Spring Boot), que validam os dados e chamam os DAOs |
+| `resources/static` | As páginas: login, menu, clientes, carros, alugar e locações |
+
+| Rota | O que faz |
+|---|---|
+| `GET` / `POST /clientes`, `DELETE /clientes/{id}` | Lista, cadastra e exclui clientes |
+| `GET /categorias` | Lista as categorias |
+| `GET` / `POST /veiculos`, `DELETE /veiculos/{id}` | Lista, cadastra e exclui carros |
+| `PUT /veiculos/{id}/situacao` | Envia para manutenção ou libera o carro |
+| `GET` / `POST /locacoes` | Lista as locações e registra um aluguel |
+| `PUT /locacoes/{id}/devolucao` | Registra a devolução e o pagamento |
 
 ### 7.2 Programação orientada a objetos
 
+Os conceitos aparecem no pacote `model` e estão detalhados na seção 6.2:
+
 | Conceito | Aplicação no código |
 |---|---|
-| **Herança** | `Pessoa` → `Cliente` → `ClientePessoaFisica` / `ClientePessoaJuridica`; `Pessoa` → `Funcionario`; `Pagamento` → `PagamentoCartao` / `PagamentoPix` |
-| **Classes abstratas** | `Pessoa`, `Cliente` e `Pagamento` não são instanciadas diretamente |
-| **Polimorfismo** | `Cliente.getDocumento()` devolve CPF ou CNPJ; `Cliente.getCondutor()` devolve o próprio cliente PF ou o condutor da empresa; `Pagamento.descrever()` muda conforme a forma de pagamento |
-| **Encapsulamento** | Atributos privados; regras como `Reserva.cancelar` e `Locacao.saldoDevedor` ficam dentro da classe |
-| **Enumerações** | `Cargo`, `StatusVeiculo`, `StatusReserva`, `StatusLocacao`, `FormaPagamento`, `Canal`, `TipoManutencao` |
-
-O modelo de classes espelha o modelo relacional (herança em tabelas separadas), de modo que `ClienteDAO` monta o objeto da subclasse correta conforme o tipo de cliente no banco.
+| **Encapsulamento** | Atributos privados; regras dentro das classes, como `Locacao.calcularValorFinal()`, `Reserva.cancelar()` e `Cliente.cnhValidaEm()` |
+| **Herança** | `Pagamento` → `PagamentoCartao` / `PagamentoPix` |
+| **Classe abstrata** | `Pagamento` não é instanciada diretamente |
+| **Polimorfismo** | `getTipo()` e `descrever()` mudam conforme a forma de pagamento; o *controller* trata qualquer `Pagamento` da mesma forma |
+| **Enumerações** | `StatusVeiculo`, `StatusReserva` e `StatusLocacao` |
 
 ### 7.3 Persistência
 
 - Todas as consultas usam **parâmetros** (`?`), nunca concatenação (RNF04).
-- As operações de negócio críticas chamam as *procedures* do banco (`CALL sp_abrir_locacao(...)`), de modo que a regra existe em um só lugar.
-- A criação de reserva usa **transação** com `pg_advisory_xact_lock` por categoria e loja: dois clientes reservando o último veículo ao mesmo tempo são serializados e apenas o primeiro é aceito.
-- A aplicação usa **uma conexão com papel de banco diferente para cada perfil**: `SITE` para login e cadastro, `ATENDENTE` para o balcão e `GERENTE` para a gestão. Mesmo que um erro de programação libere uma tela por engano, o banco nega a operação.
+- A conexão é aberta com `autoCommit` desligado: cada operação termina com `commit` e, se der erro, com `rollback`.
+- O **aluguel** grava a reserva, a locação e a mudança do carro para `LOCADO` na **mesma transação**; se o carro deixar de estar disponível no meio do caminho, nada é gravado.
+- Mesmo com a validação feita em Java, os *triggers* do banco conferem de novo as regras principais.
 
 ### 7.4 Segurança
 
 | Medida | Como foi feita |
 |---|---|
-| Senhas | *bcrypt* no banco; a aplicação nunca lê o hash |
-| Sessão | Cookie `NDSESSAO` com `HttpOnly` e `SameSite=Lax` |
-| CSRF | Token por sessão exigido em todos os formulários `POST` |
-| XSS | Toda saída HTML é escapada |
-| Autorização | Cada rota declara os perfis permitidos; o banco aplica o mesmo limite |
 | SQL *injection* | Apenas consultas parametrizadas |
+| Perfis no banco | Usuários `atendente_nextdrive` e `gerente_nextdrive`, com privilégios diferentes (seção 5.8) |
+| Auditoria | Toda inclusão, alteração e exclusão de pagamento fica registrada |
+| Login da aplicação | Usuário e senha fixos, conferidos na página (limitação na seção 11) |
 
-### 7.5 Funcionalidade extra
+### 7.5 Recursos além do básico
 
-O **painel gerencial** reúne o faturamento mensal em um gráfico de barras desenhado com HTML e CSS (sem biblioteca), a utilização da frota e as multas pendentes, e permite **exportar os relatórios em CSV** para abrir em planilhas.
+- **Cálculo automático do valor**, com estimativa no aluguel e multa de 30% da diária por dia de atraso na devolução.
+- **Controle de manutenção** dos carros, que some da lista de disponíveis enquanto estão em manutenção.
+- **Auditoria de pagamentos** feita pelo banco, com usuário, data e valores antigo e novo.
+- **Testes automatizados** das regras das classes Java (seção 9.2).
+- **Abertura automática do navegador** quando a aplicação inicia.
 
 ### 7.6 Documentação
 
-O código possui JavaDoc nas classes e métodos públicos, gerado sem erros ou avisos:
+As classes e os métodos públicos têm JavaDoc. A documentação pode ser gerada com:
 
 ```bash
 cd java
@@ -1417,82 +1256,46 @@ mvn javadoc:javadoc        # saída em target/site/apidocs
 
 ## 8 Telas do sistema
 
-As telas abaixo foram capturadas com o sistema em execução, conectado ao banco `nextdrive` com os dados de exemplo.
+O sistema tem seis telas, acessadas pelo navegador em `http://localhost:8080`:
 
-**Figura 1 — Tela de login (RF02).**
+| Tela | Arquivo | O que faz | Requisitos |
+|---|---|---|---|
+| Login | `index.html` | Entrada com usuário e senha | RF02 |
+| Menu | `menu.html` | Atalhos para as outras telas | — |
+| Clientes | `clientes.html` | Cadastro, lista e exclusão de clientes | RF03 |
+| Carros | `carros.html` | Cadastro, lista, exclusão e envio para manutenção | RF04, RF11 |
+| Alugar | `alugar.html` | Escolha do carro disponível, do cliente e das datas | RF05, RF06 |
+| Locações | `locacoes.html` | Lista das locações, devolução com cálculo do valor e pagamento por cartão ou Pix | RF08, RF09, RF10, RF12 |
 
-![Tela de login (RF02)](telas/01-login.png)
+As imagens abaixo foram capturadas com o sistema em execução, conectado ao banco `nextdrive` carregado com os dados de exemplo (`05_dados_exemplo.sql`).
 
-**Figura 2 — Cadastro do cliente pelo site, pessoa física e jurídica (RF04).**
+![Tela de login](telas/01-login.png)
 
-![Cadastro do cliente pelo site, pessoa física e jurídica (RF04)](telas/02-cadastro-cliente.png)
+*Figura — Tela de login (`index.html`).*
 
-**Figura 3 — Consulta pública de disponibilidade da frota (RF06).**
+![Menu principal](telas/02-menu.png)
 
-![Consulta pública de disponibilidade da frota (RF06)](telas/03-frota-disponivel.png)
+*Figura — Menu principal com atalhos para as telas do sistema (`menu.html`).*
 
-**Figura 4 — Nova reserva: consulta de disponibilidade e estimativa de valor (RF07).**
+![Tela de clientes](telas/03-clientes.png)
 
-![Nova reserva: consulta de disponibilidade e estimativa de valor (RF07)](telas/04-nova-reserva.png)
+*Figura — Cadastro e lista de clientes (`clientes.html`), com os três clientes de exemplo.*
 
-**Figura 5 — Área do cliente: reservas e locações (RF13).**
+![Tela de carros](telas/04-carros.png)
 
-![Área do cliente: reservas e locações (RF13)](telas/05-minhas-reservas.png)
+*Figura — Cadastro e lista de carros (`carros.html`). Cada carro mostra a categoria, a diária e a situação; o Corolla aparece como LOCADO e o Kwid como MANUTENCAO.*
 
-**Figura 6 — Painel do atendente: reservas ativas e locações abertas.**
+![Tela de aluguel](telas/05-alugar.png)
 
-![Painel do atendente: reservas ativas e locações abertas](telas/06-painel-atendente.png)
+*Figura — Aluguel do Chevrolet Onix para Ana Lima de 24/11/2026 a 27/11/2026 (`alugar.html`). O sistema registra a locação e mostra a estimativa: 3 diárias de R$ 120,00 = R$ 360,00.*
 
-**Figura 7 — Registro da retirada: veículo, quilometragem, combustível e cautela (RF09).**
+![Tela de locações](telas/06-locacoes.png)
 
-![Registro da retirada: veículo, quilometragem, combustível e cautela (RF09)](telas/07-retirada.png)
+*Figura — Lista de locações (`locacoes.html`), já com a locação criada na tela anterior. As locações abertas têm o botão "Devolver e pagar".*
 
-**Figura 8 — Registro da devolução com cálculo do valor final (RF10).**
+![Devolução e pagamento](telas/07-devolucao.png)
 
-![Registro da devolução com cálculo do valor final (RF10)](telas/08-devolucao.png)
-
-**Figura 9 — Registro de pagamento: crédito, débito ou PIX (RF11).**
-
-![Registro de pagamento: crédito, débito ou PIX (RF11)](telas/09-pagamento.png)
-
-**Figura 10 — Registro de multa de trânsito (RF24).**
-
-![Registro de multa de trânsito (RF24)](telas/10-multa.png)
-
-**Figura 11 — Cadastro e consulta de clientes no balcão (RF04).**
-
-![Cadastro e consulta de clientes no balcão (RF04)](telas/11-clientes-atendente.png)
-
-**Figura 12 — Painel gerencial com indicadores e gráfico de faturamento (RF14).**
-
-![Painel gerencial com indicadores e gráfico de faturamento (RF14)](telas/12-painel-gerente.png)
-
-**Figura 13 — Gestão de frota (RF05).**
-
-![Gestão de frota (RF05)](telas/13-frota-gerente.png)
-
-**Figura 14 — Manutenção de veículos (RF12).**
-
-![Manutenção de veículos (RF12)](telas/14-manutencao.png)
-
-**Figura 15 — Gestão de funcionários, exclusiva do gerente (RF03, RN10).**
-
-![Gestão de funcionários, exclusiva do gerente (RF03, RN10)](telas/15-funcionarios.png)
-
-**Figura 16 — Trilha de auditoria de pagamentos e preços (RF17).**
-
-![Trilha de auditoria de pagamentos e preços (RF17)](telas/16-auditoria.png)
-
-
-### 8.1 Banco de dados
-
-![Tabelas no DBeaver](telas/banco-tabelas.png)
-
-*Figura — Estrutura do banco no DBeaver.*
-
-![Diagrama ER gerado no DBeaver](telas/banco-diagrama-er.png)
-
-*Figura — Diagrama entidade-relacionamento gerado a partir do banco.*
+*Figura — Devolução do Toyota Corolla X de Marcos Almeida em 23/11/2026, com pagamento por Pix. O valor final (3 diárias de R$ 380,00 = R$ 1.140,00, sem atraso) é calculado pelo método `calcularValorFinal` da classe `Locacao`, e com o pagamento completo a locação passa para PAGA.*
 
 ---
 
@@ -1500,62 +1303,83 @@ As telas abaixo foram capturadas com o sistema em execução, conectado ao banco
 
 ### 9.1 Regras no banco
 
-O script `sql/11_testes_regras.sql` executa **34 verificações** e imprime `[OK]` ou `[FALHA]` para cada uma. Entre elas: condutor menor de 21 anos, CNH recente ou CNH vencida recusados; locação conflitante e veículo em manutenção recusados; veículo locado que não entra em manutenção; abertura da locação com diária e cautela copiadas da categoria; cálculo da devolução (diárias, horas extras, combustível, taxa de outra loja e valor final); locação encerrada ou paga que não aceita alteração nem exclusão; pagamento parcial, pagamento acima do saldo recusado e quitação; forma de pagamento inválida recusada; cancelamento de reserva exigindo justificativa; auditoria de pagamentos e de alteração de preços; retenção e liberação da cautela conforme as multas; e login com senha correta e incorreta. Os privilégios de cada perfil foram conferidos separadamente, com logins reais (ver [`docs/politicas-de-acesso.md`](politicas-de-acesso.md)).
+O script `sql/11_testes_regras.sql` roda em uma transação, mostra `OK` ou `FALHOU` para cada teste e desfaz tudo no final. São 13 verificações:
+
+| Teste | Resultado |
+|---|---|
+| Índices extras foram criados | OK |
+| View mostra só carros disponíveis | OK |
+| Bloqueia reserva com CNH vencida | OK |
+| Bloqueia alugar carro em manutenção | OK |
+| Bloqueia alugar carro que já está alugado | OK |
+| Bloqueia devolução com quilometragem menor | OK |
+| Devolução calcula R$ 672,00 (5 dias, 2 de atraso) | OK |
+| Carro volta a ficar disponível e recebe a quilometragem | OK |
+| Auditoria registra inclusão e alteração do pagamento | OK |
+| Cancela reserva ativa com justificativa | OK |
+| Não cancela reserva que já está cancelada | OK |
+| Atendente não pode excluir cliente | OK |
+| Atendente registra pagamento (auditoria funciona para ele) | OK |
 
 ```bash
-psql -U postgres -d nextdrive -f sql/11_testes_regras.sql   # roda em transação e desfaz ao final
+psql -U postgres -d nextdrive -f sql/11_testes_regras.sql
 ```
 
 ### 9.2 Aplicação
 
-O fluxo completo foi exercitado pela interface web: cadastro e login por perfil, consulta de disponibilidade, reserva com estimativa, cancelamento, retirada, devolução, pagamento parcial e total, multa e painel gerencial. Também foram verificados: bloqueio de rotas por perfil, recusa de formulário sem token CSRF, escape de HTML, recusa de condutor menor de 21 anos e recusa de manutenção em veículo locado.
+A classe `NextDriveTest` tem 9 testes JUnit das regras das classes de domínio: valor de três dias sem atraso; devolução no mesmo dia cobrando uma diária; atraso acrescentando 30% da diária por dia; encerramento guardando os dados da devolução; saldo devedor descontando o que já foi pago; CNH vencida não sendo válida; pagamentos se descrevendo de forma diferente; só reserva ativa podendo ser cancelada; e estimativa usando a diária da categoria.
+
+```bash
+cd java
+mvn test
+```
 
 ### 9.3 Backup e restauração
 
-O backup completo foi restaurado em um banco novo, e as contagens (tabelas, locações, pagamentos, veículos e *triggers*) conferiram com as do banco original (seção 5.9).
+O backup completo foi restaurado em um banco novo, e as contagens (clientes, veículos, reservas, locações, pagamentos, *triggers*, views e funções) conferiram com as do banco original (seção 5.9).
 
 ---
 
 ## 10 Como executar
 
-**Requisitos:** JDK 17, PostgreSQL 16 (ou 11 ou superior), Maven e DBeaver (ou `psql`).
+**Requisitos:** JDK 17, Maven, PostgreSQL 16 e DBeaver (ou `psql`).
 
-1. **Banco:** crie o banco `nextdrive` e execute, na ordem, os scripts de `sql/` (02 a 09; o 05 carrega os dados de exemplo). Detalhes em [`sql/README.md`](../sql/README.md).
-2. **Aplicação:** importe a pasta `java/` como projeto Maven (Eclipse: *File > Import > Maven > Existing Maven Projects*) e execute `br.edu.unoesc.nextdrive.App`, ou, pelo terminal:
+1. **Banco:** crie o banco `nextdrive` e execute, na ordem, os scripts `02`, `03`, `04`, `05`, `07`, `08` e `09` da pasta `sql/` (seção 5).
+2. **Conexão:** se a senha ou a porta do seu PostgreSQL forem diferentes, ajuste em `java/src/main/java/br/edu/unoesc/nextdrive/dao/SingleConnection.java`.
+3. **Aplicação:** execute a classe `br.edu.unoesc.nextdrive.Application` pelo Eclipse ou, pelo terminal:
 
 ```bash
 cd java
-mvn package
-java -jar target/nextdrive-jar-with-dependencies.jar
+mvn spring-boot:run
 ```
 
-3. **Acesso:** abra <http://localhost:8080>. Configurações por variável de ambiente (`NEXTDRIVE_DB_URL`, `NEXTDRIVE_PORT` e as credenciais de cada perfil) estão em [`java/README.md`](../java/README.md).
+4. **Acesso:** o navegador abre em <http://localhost:8080>. Entre com o usuário `admin` e a senha `1234`.
 
-**Usuários de exemplo** (senha `Senha@123`): cliente `ana.lima@example.com`; atendente `juliana.prado@nextdrive.example`; gerente `marcos.almeida@nextdrive.example`.
+Mais detalhes em [`java/README.md`](../java/README.md).
 
 ---
 
 ## 11 Conclusões
 
-O Next Drive cumpre o processo de locação de ponta a ponta e atende os três componentes do trabalho: o banco com regras, segurança e recuperação; a modelagem UML consistente com o código e o banco; e a aplicação Java orientada a objetos.
+O Next Drive cumpre o processo de locação, do cadastro ao pagamento, e atende os três componentes do trabalho: o banco com regras, perfis de acesso e recuperação; a modelagem UML consistente com o código e o banco; e a aplicação Java orientada a objetos.
 
 **Principais aprendizados**
 
-- **Regras no banco valem para todos.** Colocar conflito de locação, idade do condutor e imutabilidade em *triggers* e *procedures* fez com que as telas ficassem simples e que nenhum caminho de acesso consiga burlar a regra. O custo é testar o banco com cuidado, o que levou ao script de 34 verificações.
-- **Normalização tem consequências práticas.** Remover `cliente_id` de `locacao` (o cliente vem da reserva) evitou uma dependência transitiva; em compensação, guardar a diária contratada e as parcelas do valor final foi uma redundância deliberada, para que contratos antigos não mudem quando o preço muda.
-- **Concorrência exige decisão explícita.** O caso de dois clientes reservando o último veículo só foi resolvido de forma confiável com transação e bloqueio consultivo.
-- **Menos dependências, mais compreensão.** Usar o servidor HTTP do JDK e JDBC puro deu controle sobre cada camada, ao custo de escrever à mão o que um *framework* já traria.
+- **Regras no banco valem para todos.** Com os *triggers*, um carro indisponível ou um cliente com CNH vencida são recusados mesmo que alguém acesse o banco sem passar pela aplicação.
+- **Normalização tem consequências práticas.** Não guardar o cliente na locação (ele vem da reserva) evitou uma dependência transitiva; guardar o valor final foi uma redundância de propósito, para que locações antigas não mudem quando a diária muda.
+- **Transações evitam dados pela metade.** O aluguel grava reserva, locação e situação do carro juntos, ou nada.
+- **Escopo menor, sistema mais claro.** Simplificar o sistema fez com que o grupo inteiro conseguisse entender e explicar cada parte do código.
 
 **Limitações conhecidas**
 
-- A aplicação usa HTTP; para uso real é necessário HTTPS (por exemplo, por um servidor intermediário).
-- Não há limite de tentativas de login.
-- As sessões ficam em memória e se perdem ao reiniciar a aplicação.
-- Cada requisição abre uma conexão nova com o banco, sem *pool* de conexões.
-- A cobrança do pagamento é registrada manualmente, sem integração com operadoras de cartão ou PIX.
-- Os usuários de exemplo do banco usam senhas de teste, que devem ser trocadas antes de qualquer uso real.
+- O login da aplicação usa usuário e senha fixos conferidos na página, e as rotas não exigem login.
+- A senha do banco está escrita no código, e a aplicação usa uma única conexão; por isso o servidor atende uma requisição por vez.
+- Pela tela, a devolução já exige o pagamento do valor total; reserva antecipada, cancelamento e pagamento parcial só podem ser feitos direto no banco.
+- O valor final é calculado em Java na tela de devolução; a *procedure* `sp_devolver_veiculo` tem a mesma regra, mas não é chamada pela aplicação.
+- As telas carregam Bootstrap e jQuery pela internet.
+- A aplicação usa HTTP; para uso real seria necessário HTTPS.
 
-**Trabalhos futuros:** HTTPS e limite de tentativas de login; *pool* de conexões; arquivamento de WAL para reduzir a perda máxima de dados do backup; integração com meios de pagamento; notificações de reserva e devolução por e-mail.
+**Trabalhos futuros:** login com usuários guardados no banco e senha criptografada; telas de reserva antecipada, cancelamento e relatórios; pagamento parcial pela tela; uso das *procedures* pela aplicação; *pool* de conexões.
 
 ---
 
@@ -1572,3 +1396,5 @@ SOMMERVILLE, Ian. **Engenharia de software**. 10. ed. São Paulo: Pearson, 2018.
 THE POSTGRESQL GLOBAL DEVELOPMENT GROUP. **PostgreSQL 16 documentation**. Disponível em: <https://www.postgresql.org/docs/16/>. Acesso em: nov. 2026.
 
 ORACLE. **Java SE 17 documentation**. Disponível em: <https://docs.oracle.com/en/java/javase/17/>. Acesso em: nov. 2026.
+
+SPRING. **Spring Boot reference documentation**. Disponível em: <https://docs.spring.io/spring-boot/>. Acesso em: nov. 2026.
