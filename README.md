@@ -112,15 +112,15 @@ NextDrive/
 ├── docs/
 │   ├── telas/
 │   ├── uml/
-│   │   ├── casos-de-uso.png
-│   │   ├── classes.png
-│   │   ├── sequencia-aluguel.png
-│   │   ├── sequencia-devolucao-pagamento.png
-│   │   ├── atividades.png
-│   │   ├── estados-veiculo.png
-│   │   ├── estados-reserva.png
-│   │   ├── estados-locacao.png
-│   │   └── relacional.png
+│   │   ├── casos-de-uso.jpg
+│   │   ├── diagrama-de-classe.jpeg
+│   │   ├── diagrama-sequencia-aluguel.jpeg
+│   │   ├── diagrama-sequencia-devolucao-pagamento.jpeg
+│   │   ├── diagrama-de-atividades.jpeg
+│   │   ├── estados-veiculo.jpeg
+│   │   ├── estados-reserva.jpeg
+│   │   ├── estados-locação.jpeg
+│   │   └── diagrama-relacional.jpeg
 │   ├── artigo.md
 │   ├── backup-restore.md
 │   ├── dicionario-de-dados.md
@@ -140,7 +140,7 @@ NextDrive/
 | Levantamento de requisitos | [`Levantamento de Requisitos.docx`](Levantamento%20de%20Requisitos.docx) |
 | Artigo completo | [`docs/artigo.md`](docs/artigo.md) |
 | Descrição do modelo de negócio | [Artigo](docs/artigo.md) (seção 2) |
-| Diagrama relacional | [Imagem](docs/uml/relacional.png) · [Artigo](docs/artigo.md) (seção 4) |
+| Diagrama relacional | [Imagem](docs/uml/diagrama-relacional.jpeg) · [Artigo](docs/artigo.md) (seção 4) |
 | Dicionário de dados | [`docs/dicionario-de-dados.md`](docs/dicionario-de-dados.md) |
 | Scripts do banco de dados | [`sql/`](sql/) |
 | Políticas de acesso | [`docs/politicas-de-acesso.md`](docs/politicas-de-acesso.md) |
@@ -188,7 +188,7 @@ O banco de dados utiliza os seguintes recursos:
 
 ### 7.3 Documentação complementar
 
-- Modelo relacional: [`docs/uml/relacional.png`](docs/uml/relacional.png).
+- Modelo relacional: [`docs/uml/diagrama-relacional.jpeg`](docs/uml/diagrama-relacional.jpeg).
 - Dicionário de dados: [`docs/dicionario-de-dados.md`](docs/dicionario-de-dados.md).
 - Políticas de acesso: [`docs/politicas-de-acesso.md`](docs/politicas-de-acesso.md).
 - Procedimentos de backup: [`docs/backup-restore.md`](docs/backup-restore.md).
@@ -199,15 +199,15 @@ Os diagramas UML documentam a estrutura, o comportamento e os principais process
 
 | Diagrama | Abrir | Requisito |
 |---|---|---|
-| Casos de uso | [Ver diagrama de casos de uso](docs/uml/casos-de-uso.png) | RF18 |
-| Classes | [Ver diagrama de classes](docs/uml/classes.png) | RF19 |
-| Sequência — aluguel | [Ver sequência do aluguel](docs/uml/sequencia-aluguel.png) | RF20 |
-| Sequência — devolução e pagamento | [Ver sequência da devolução e pagamento](docs/uml/sequencia-devolucao-pagamento.png) | RF20 |
-| Atividades — processo de locação | [Ver diagrama de atividades](docs/uml/atividades.png) | RF21 |
-| Estados — veículo | [Ver estados do veículo](docs/uml/estados-veiculo.png) | RF22 |
-| Estados — reserva | [Ver estados da reserva](docs/uml/estados-reserva.png) | RF22 |
-| Estados — locação | [Ver estados da locação](docs/uml/estados-locacao.png) | RF22 |
-| Relacional | [Ver diagrama relacional](docs/uml/relacional.png) | BDII |
+| Casos de uso | [Ver diagrama de casos de uso](docs/uml/casos-de-uso.jpg) | RF18 |
+| Classes | [Ver diagrama de classes](docs/uml/diagrama-de-classe.jpeg) | RF19 |
+| Sequência — aluguel | [Ver sequência do aluguel](docs/uml/diagrama-sequencia-aluguel.jpeg) | RF20 |
+| Sequência — devolução e pagamento | [Ver sequência da devolução e pagamento](docs/uml/diagrama-sequencia-devolucao-pagamento.jpeg) | RF20 |
+| Atividades — processo de locação | [Ver diagrama de atividades](docs/uml/diagrama-de-atividades.jpeg) | RF21 |
+| Estados — veículo | [Ver estados do veículo](docs/uml/estados-veiculo.jpeg) | RF22 |
+| Estados — reserva | [Ver estados da reserva](docs/uml/estados-reserva.jpeg) | RF22 |
+| Estados — locação | [Ver estados da locação](docs/uml/estados-loca%C3%A7%C3%A3o.jpeg) | RF22 |
+| Relacional | [Ver diagrama relacional](docs/uml/diagrama-relacional.jpeg) | BDII |
 
 A explicação de cada diagrama está no [artigo](docs/artigo.md).
 
