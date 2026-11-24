@@ -891,7 +891,7 @@ esac
 
 ## 6 Modelagem UML
 
-Os diagramas de casos de uso, sequência, atividades e estados foram escritos em Mermaid, que o GitHub desenha diretamente; o diagrama de classes é uma imagem. Cada diagrama cita os requisitos atendidos e, quando aplicável, a classe, a *procedure* ou o *trigger* que implementa cada passo, o que mantém a modelagem consistente com o código e o banco (RNF09).
+Os diagramas de classes, sequência e atividades são imagens, guardadas na pasta [`uml/`](uml/); os de casos de uso e de estados foram escritos em Mermaid, que o GitHub desenha diretamente. Cada diagrama cita os requisitos atendidos e, quando aplicável, a classe, a *procedure* ou o *trigger* que implementa cada passo, o que mantém a modelagem consistente com o código e o banco (RNF09).
 
 ### 6.1 Casos de uso (RF18)
 
@@ -988,71 +988,19 @@ O diagrama mostra o pacote `model`. Os pacotes `dao` (acesso ao banco com JDBC) 
 
 ### 6.3 Sequência (RF20)
 
-Fluxos do **aluguel** e da **devolução com pagamento**. As camadas seguem a arquitetura do código Java: tela no navegador → `Controller` (rotas do Spring Boot) → `DAO` (JDBC com consultas parametrizadas) → PostgreSQL (triggers do script `07`).
+Fluxos do **aluguel** e da **devolução com pagamento**. As linhas de vida seguem a arquitetura do sistema: o **Administrador**, a **Interface** (telas no navegador), o **Sistema** (aplicação Java: *controllers*, classes de domínio e DAOs) e o **Banco de Dados** (PostgreSQL, com os *triggers* do script `07`). Os quadros `alt` mostram os caminhos alternativos: dados inválidos, recusa do banco e forma de pagamento.
 
 #### 1. Aluguel — RF06, RF14, RF15
 
-```mermaid
-sequenceDiagram
-    actor U as Administrador
-    participant T as Tela Alugar
-    participant LC as LocacaoController
-    participant CD as ClienteDAO
-    participant VD as VeiculoDAO
-    participant LD as LocacaoDAO
-    participant DB as PostgreSQL
+![Diagrama de sequência do aluguel](uml/diagrama-sequencia-aluguel.jpeg)
 
-    U->>T: escolhe carro, cliente e datas
-    T->>LC: POST /locacoes
-    LC->>CD: buscar(clienteId)
-    LC->>VD: buscar(veiculoId)
-    LC->>LC: confere carro disponível, datas e CNH válida até a devolução
-    alt dados válidos
-        LC->>LD: alugar(cliente, veiculo, retirada, devolucao)
-        LD->>DB: INSERT INTO reserva (status EFETIVADA)
-        DB->>DB: trigger trg_validar_cnh confere a CNH
-        LD->>DB: INSERT INTO locacao (status ABERTA)
-        DB->>DB: trigger trg_validar_locacao confere se o carro está livre
-        LD->>DB: UPDATE veiculo SET status = 'LOCADO'
-        LD->>DB: COMMIT
-        LC-->>T: aluguel registrado e estimativa de valor
-        T-->>U: mostra a mensagem
-    else regra violada
-        LC-->>T: motivo da recusa
-        T-->>U: mostra o erro (por exemplo, CNH vence antes da devolução)
-    end
-```
+*Figura — Sequência do aluguel. O Sistema busca o cliente e o carro, confere as datas e a disponibilidade e grava, numa única transação, a reserva (EFETIVADA), a locação e a mudança do carro para LOCADO. Os gatilhos `trg_validar_cnh` (ConfereCNH) e `trg_validar_locacao` (ConfereCarro) repetem as regras no banco.*
 
 #### 2. Devolução e pagamento — RF08, RF09, RF10, RF16
 
-```mermaid
-sequenceDiagram
-    actor U as Administrador
-    participant T as Tela Locações
-    participant LC as LocacaoController
-    participant L as Locacao
-    participant LD as LocacaoDAO
-    participant PD as PagamentoDAO
-    participant DB as PostgreSQL
+![Diagrama de sequência da devolução e pagamento](uml/diagrama-sequencia-devolucao-pagamento.jpeg)
 
-    U->>T: informa data, km de chegada e forma de pagamento
-    T->>LC: PUT /locacoes/{id}/devolucao
-    LC->>LD: buscar(id)
-    LC->>LC: confere locação aberta, km e data
-    LC->>L: encerrar(km, data)
-    L->>L: calcularValorFinal(data)
-    LC->>LD: encerrar(locacao)
-    LD->>DB: UPDATE locacao SET status = 'ENCERRADA', valor_final = ?
-    DB->>DB: trigger trg_liberar_veiculo deixa o carro DISPONIVEL
-    LD->>DB: COMMIT
-    LC->>PD: salvar(PagamentoCartao ou PagamentoPix)
-    PD->>DB: INSERT INTO pagamento
-    DB->>DB: trigger trg_auditar_pagamento grava a auditoria
-    PD->>DB: UPDATE locacao SET status = 'PAGA' (se o total pago cobre o valor)
-    PD->>DB: COMMIT
-    LC-->>T: valor final e forma de pagamento
-    T-->>U: mostra o recibo
-```
+*Figura — Sequência da devolução com pagamento. O Sistema confere a km, a data e a forma de pagamento, calcula o valor final em `Locacao.calcularValorFinal()` e encerra a locação; o gatilho `trg_liberar_veiculo` (LiberaCarro) devolve o carro à frota. O pagamento é criado como `PagamentoCartao` ou `PagamentoPix`, o gatilho `trg_auditar_pagamento` (GravaAuditoria) registra a auditoria e a locação passa para PAGA.*
 
 **Observações**
 - As regras principais (carro livre, CNH válida, devolução do carro à frota e auditoria) são garantidas pelos triggers do banco, mesmo que a aplicação já as confira antes.
@@ -1060,64 +1008,22 @@ sequenceDiagram
 
 ### 6.4 Atividades (RF21)
 
-Fluxo do aluguel de um carro, da escolha até o pagamento, com as responsabilidades divididas em raias: **Administrador**, **Aplicação** e **Banco de dados**. Os losangos são decisões.
+Fluxo completo de uma locação, do login até o pagamento, com as responsabilidades divididas em raias: **Administrador**, **Sistema (site e Java)** e **Banco de Dados**. Os losangos são decisões.
 
-```mermaid
-flowchart TD
-    Inicio(("Início"))
-    Fim(("Fim"))
+![Diagrama de atividades](uml/diagrama-de-atividades.jpeg)
 
-    subgraph RAIA_ADMIN["Administrador"]
-        A1["Escolhe o carro, o cliente e as datas"]
-        A2["Entrega o carro ao cliente"]
-        A3["Recebe o carro e informa data e km de chegada"]
-        A4["Informa a forma de pagamento: cartão ou Pix"]
-    end
-
-    subgraph RAIA_APP["Aplicação"]
-        P1{"Carro disponível e CNH válida até a devolução?"}
-        P2["Mostra o motivo da recusa"]
-        P3["Mostra a estimativa de valor"]
-        P4["Calcula o valor final: diárias e 30% da diária por dia de atraso"]
-        P5["Mostra o valor final e a forma de pagamento"]
-    end
-
-    subgraph RAIA_BANCO["Banco de dados"]
-        B1["Registra a reserva EFETIVADA e a locação ABERTA; carro LOCADO"]
-        B2["Encerra a locação; o trigger devolve o carro como DISPONIVEL"]
-        B3["Grava o pagamento; o trigger registra a auditoria"]
-        D1{"Total pago cobre o valor final?"}
-        B4["Locação PAGA"]
-        B5["Locação continua ENCERRADA, com saldo devedor"]
-    end
-
-    Inicio --> A1
-    A1 --> P1
-    P1 -->|Não| P2
-    P2 --> Fim
-    P1 -->|Sim| B1
-    B1 --> P3
-    P3 --> A2
-    A2 --> A3
-    A3 --> P4
-    P4 --> B2
-    B2 --> A4
-    A4 --> B3
-    B3 --> D1
-    D1 -->|Sim| B4
-    D1 -->|Não| B5
-    B4 --> P5
-    B5 --> P5
-    P5 --> Fim
-```
+*Figura — Diagrama de atividades do processo de locação: login, aluguel com as validações da aplicação e dos gatilhos, devolução com cálculo do valor final e registro do pagamento.*
 
 #### Pontos de decisão e regras associadas
 
 | Decisão | Requisito | Onde é garantida |
 |---|---|---|
-| Carro disponível e CNH válida? | RF14, RF15 | `LocacaoController` e triggers `trg_validar_locacao` e `trg_validar_cnh` |
+| Login válido? | RF02 | Tela de login (`index.html`) |
+| Dados do aluguel válidos? | RF14, RF15 | `LocacaoController` (cliente, carro disponível, datas e CNH) |
+| Regras do banco respeitadas? | RF14, RF15 | Triggers `trg_validar_cnh` e `trg_validar_locacao` |
+| Devolução e pagamento válidos? | RF08, RF10 | `LocacaoController` (km, data e forma de pagamento) |
 | Valor final | RF09 | `Locacao.calcularValorFinal()` e, no banco, `fn_valor_final` |
-| Total pago cobre o valor? | RF10 | `PagamentoDAO`, que marca a locação como `PAGA` |
+| Total pago ≥ valor final? | RF10 | `PagamentoDAO`, que marca a locação como `PAGA` |
 
 Pela tela, a devolução já registra o pagamento do valor total, então a locação termina `PAGA`. O caminho de pagamento parcial existe no banco (a locação fica `ENCERRADA` com saldo devedor, como no relatório R07).
 
