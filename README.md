@@ -287,6 +287,9 @@ As atividades foram distribuídas considerando os módulos do sistema e os requi
 
 O planejamento e o acompanhamento das tarefas foram realizados por meio do GitHub Projects, permitindo organizar as atividades, acompanhar seu andamento e identificar as responsabilidades de cada integrante.
 
+
+*Quadro Kanban do projeto:* [Next Drive - Planejamento](https://github.com/users/lucasorlandi7/projects/1)
+
 ### 11.2 Versionamento
 
 O código-fonte e a documentação do projeto foram mantidos em um repositório GitHub, utilizando Git para controle de versão.
