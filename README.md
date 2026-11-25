@@ -300,10 +300,10 @@ https://github.com/lucasorlandi7/NextDrive
 
 | Integrante | Responsabilidades principais |
 |---|---|
-| Lucas Orlandi | Reservas e controle de locações |
-| Samuel Gralow | Pagamentos, banco de dados e documentação |
-| Diogo Rodrigo Nielsson | Cadastro e gerenciamento de carros |
-| Felipe Kremer | Cadastro e gerenciamento de clientes |
+| Lucas Orlandi | Aplicação Java (classes de domínio, DAOs, controllers e telas), scripts SQL do banco, testes, diagramas de casos de uso e de estados e simplificação do escopo do sistema |
+| Diogo Rodrigo Nielsson | Modelo relacional, dicionário de dados, políticas de acesso, backup e restore, relatórios (SELECTs), diagramas de classes, sequência e atividades, artigo, prints das telas e organização das tarefas no quadro Kanban |
+| Samuel Gralow | Escrita, formatação e organização do README |
+| Felipe Kremer | Link do quadro Kanban no README |
 
 ## 13. Considerações finais
 
